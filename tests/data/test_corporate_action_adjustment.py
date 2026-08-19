@@ -92,6 +92,7 @@ def test_adjust_ohlcv_applies_backward_factors_and_preserves_raw_values():
             low="589.50",
             close="598.90",
             volume="2427699",
+            # Bonus issues do not change the security identifier.
             isin="INE619A01035",
         ),
     ]
@@ -106,41 +107,6 @@ def test_adjust_ohlcv_applies_backward_factors_and_preserves_raw_values():
     assert adjusted[1].adjusted_open == Decimal("602.700000")
     assert adjusted[1].price_factor == Decimal("1")
     assert adjusted[1].volume_factor == Decimal("1")
-
-
-def test_patanjali_real_bonus_bars_have_adjusted_continuity():
-    action = parse_corporate_action(
-        record("Bonus 2:1", symbol="PATANJALI", ex_date=date(2025, 9, 11))
-    )
-    raw_bars = [
-        bar(
-            symbol="PATANJALI",
-            bar_date=date(2025, 9, 10),
-            open="1810.00",
-            high="1810.00",
-            low="1788.00",
-            close="1802.00",
-            volume="5000",
-            isin="INE619A01035",
-        ),
-        bar(
-            symbol="PATANJALI",
-            bar_date=date(2025, 9, 11),
-            open="602.70",
-            high="603.50",
-            low="589.50",
-            close="598.90",
-            volume="15000",
-            isin="INE619A01035",
-        ),
-    ]
-
-    adjusted = adjust_ohlcv_bars(raw_bars, [action])
-
-    assert adjusted[0].adjusted_close == Decimal("600.666667")
-    assert adjusted[0].adjusted_volume == Decimal("15000.000000")
-    assert adjusted[1].adjusted_open == Decimal("602.700000")
-    assert adjusted[1].adjusted_close == Decimal("598.900000")
 
     raw_close_to_open_ratio = raw_bars[1].open / raw_bars[0].close
     adjusted_close_to_open_ratio = (
