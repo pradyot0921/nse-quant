@@ -2,6 +2,17 @@
 
 COST MODEL: CURRENT 2026 REFERENCE SCHEDULE APPLIED RETROSPECTIVELY
 HISTORICAL FEE RECONSTRUCTION: NO
+
+Daily cost totals are the authoritative accounting values. Per-fill costs are
+reporting allocations: DP is assigned to sold symbols, then to same-symbol sell
+fills pro-rata by turnover; all other components are allocated pro-rata by
+turnover within the applicable side. Allocated rows must sum back to daily
+totals.
+
+GST is calculated from paise-rounded brokerage, exchange transaction charges,
+and SEBI charges pending real contract-note validation. This may differ from a
+broker that computes GST from unrounded intermediates, and is covered by the
+daily real-record tolerance rule.
 """
 
 from __future__ import annotations
@@ -10,7 +21,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 from enum import StrEnum
-from typing import Iterable
+from typing import Iterable, Sequence
 
 MONEY = Decimal("0.01")
 RUPEE = Decimal("1")
@@ -45,9 +56,7 @@ class CostProfile:
         profile = DPChargeProfile(dp_profile)
         if profile is DPChargeProfile.MALE_PRIMARY:
             return self.dp_male_primary
-        if profile is DPChargeProfile.FEMALE_PRIMARY:
-            return self.dp_female_primary
-        raise ValueError(f"Unsupported DP profile: {dp_profile}")
+        return self.dp_female_primary
 
 
 ZERODHA_NSE_DELIVERY_2026_08 = CostProfile(
@@ -99,10 +108,7 @@ class Fill:
 
 
 @dataclass(frozen=True)
-class DailyCostBreakdown:
-    trade_date: date | None
-    buy_turnover: Decimal
-    sell_turnover: Decimal
+class CostComponents:
     brokerage: Decimal
     stt_buy: Decimal
     stt_sell: Decimal
@@ -111,10 +117,6 @@ class DailyCostBreakdown:
     gst: Decimal
     stamp_duty: Decimal
     dp_charges: Decimal
-
-    @property
-    def total_turnover(self) -> Decimal:
-        return money(self.buy_turnover + self.sell_turnover)
 
     @property
     def stt(self) -> Decimal:
@@ -131,6 +133,24 @@ class DailyCostBreakdown:
             + self.stamp_duty
             + self.dp_charges
         )
+
+
+@dataclass(frozen=True)
+class AllocatedFillCost(CostComponents):
+    fill: Fill
+    allocation_note: str = "REPORTING ALLOCATION; DAILY TOTAL IS AUTHORITATIVE"
+
+
+@dataclass(frozen=True)
+class DailyCostBreakdown(CostComponents):
+    trade_date: date | None
+    buy_turnover: Decimal
+    sell_turnover: Decimal
+    allocations: tuple[AllocatedFillCost, ...] = ()
+
+    @property
+    def total_turnover(self) -> Decimal:
+        return money(self.buy_turnover + self.sell_turnover)
 
 
 def calculate_daily_costs(
@@ -155,6 +175,7 @@ def calculate_daily_costs(
             gst=ZERO,
             stamp_duty=ZERO,
             dp_charges=ZERO,
+            allocations=(),
         )
 
     trade_dates = {fill.trade_date for fill in daily_fills}
@@ -189,10 +210,7 @@ def calculate_daily_costs(
         Decimal(len(sold_symbols)) * profile.dp_charge_for(dp_profile)
     )
 
-    return DailyCostBreakdown(
-        trade_date=next(iter(trade_dates)),
-        buy_turnover=buy_turnover,
-        sell_turnover=sell_turnover,
+    components = CostComponents(
         brokerage=brokerage,
         stt_buy=stt_buy,
         stt_sell=stt_sell,
@@ -203,6 +221,14 @@ def calculate_daily_costs(
         dp_charges=dp_charges,
     )
 
+    return DailyCostBreakdown(
+        trade_date=next(iter(trade_dates)),
+        buy_turnover=buy_turnover,
+        sell_turnover=sell_turnover,
+        allocations=allocate_daily_costs(daily_fills, components),
+        **components.__dict__,
+    )
+
 
 def money(amount: Decimal) -> Decimal:
     return amount.quantize(MONEY, rounding=ROUND_HALF_UP)
@@ -210,6 +236,109 @@ def money(amount: Decimal) -> Decimal:
 
 def nearest_rupee(amount: Decimal) -> Decimal:
     return amount.quantize(RUPEE, rounding=ROUND_HALF_UP)
+
+
+def allocate_daily_costs(
+    fills: Sequence[Fill],
+    daily: CostComponents,
+) -> tuple[AllocatedFillCost, ...]:
+    """Allocate authoritative daily costs to fills for reporting/reconciliation."""
+
+    total_turnovers = [fill.turnover for fill in fills]
+    buy_turnovers = [
+        fill.turnover if fill.side is TradeSide.BUY else ZERO for fill in fills
+    ]
+    sell_turnovers = [
+        fill.turnover if fill.side is TradeSide.SELL else ZERO for fill in fills
+    ]
+
+    brokerage = _allocate_by_weight(daily.brokerage, total_turnovers)
+    stt_buy = _allocate_by_weight(daily.stt_buy, buy_turnovers)
+    stt_sell = _allocate_by_weight(daily.stt_sell, sell_turnovers)
+    exchange = _allocate_by_weight(
+        daily.exchange_transaction_charge, total_turnovers
+    )
+    sebi = _allocate_by_weight(daily.sebi_turnover_charge, total_turnovers)
+    gst = _allocate_by_weight(daily.gst, total_turnovers)
+    stamp = _allocate_by_weight(daily.stamp_duty, buy_turnovers)
+    dp = _allocate_dp_by_sold_symbol(fills, daily.dp_charges)
+
+    return tuple(
+        AllocatedFillCost(
+            fill=fill,
+            brokerage=brokerage[index],
+            stt_buy=stt_buy[index],
+            stt_sell=stt_sell[index],
+            exchange_transaction_charge=exchange[index],
+            sebi_turnover_charge=sebi[index],
+            gst=gst[index],
+            stamp_duty=stamp[index],
+            dp_charges=dp[index],
+        )
+        for index, fill in enumerate(fills)
+    )
+
+
+def _allocate_by_weight(amount: Decimal, weights: Sequence[Decimal]) -> list[Decimal]:
+    if amount == ZERO or not weights:
+        return [ZERO for _ in weights]
+
+    total_weight = sum(weights, ZERO)
+    if total_weight == ZERO:
+        return [ZERO for _ in weights]
+
+    allocations = [money(amount * weight / total_weight) for weight in weights]
+    return _add_rounding_remainder(allocations, amount, weights)
+
+
+def _allocate_dp_by_sold_symbol(
+    fills: Sequence[Fill], daily_dp_charges: Decimal
+) -> list[Decimal]:
+    sell_symbols = sorted({fill.symbol for fill in fills if fill.side is TradeSide.SELL})
+    if not sell_symbols:
+        return [ZERO for _ in fills]
+
+    per_symbol_charges = _allocate_by_weight(
+        daily_dp_charges, [Decimal(1) for _ in sell_symbols]
+    )
+    charges_by_symbol = dict(zip(sell_symbols, per_symbol_charges, strict=True))
+    allocations = [ZERO for _ in fills]
+
+    for symbol in sell_symbols:
+        symbol_weights = [
+            fill.turnover
+            if fill.side is TradeSide.SELL and fill.symbol == symbol
+            else ZERO
+            for fill in fills
+        ]
+        symbol_allocations = _allocate_by_weight(
+            charges_by_symbol[symbol], symbol_weights
+        )
+        allocations = [
+            money(current + allocated)
+            for current, allocated in zip(allocations, symbol_allocations, strict=True)
+        ]
+
+    return allocations
+
+
+def _add_rounding_remainder(
+    allocations: list[Decimal], amount: Decimal, weights: Sequence[Decimal]
+) -> list[Decimal]:
+    remainder = money(amount - sum(allocations, ZERO))
+    if remainder == ZERO:
+        return allocations
+
+    eligible = [index for index, weight in enumerate(weights) if weight > ZERO]
+    if not eligible:
+        return allocations
+
+    penny = MONEY if remainder > ZERO else -MONEY
+    for offset in range(int(abs(remainder / MONEY))):
+        index = eligible[offset % len(eligible)]
+        allocations[index] = money(allocations[index] + penny)
+
+    return allocations
 
 
 def _to_decimal(value: Decimal | str | int, *, field_name: str) -> Decimal:
