@@ -7,7 +7,9 @@ import pytest
 from nse_quant.data.nse_acquisition import (
     TradingCalendarError,
     TradingSession,
+    UDiffArchiveNotFoundError,
     UDiffAcquisitionError,
+    UDiffDownloadRetryableError,
     audit_cm_udiff_raw_files,
     cm_udiff_archive_url,
     cm_udiff_filename,
@@ -15,6 +17,7 @@ from nse_quant.data.nse_acquisition import (
     date_from_cm_udiff_filename,
     download_cm_udiff_file,
     load_session_calendar,
+    research_sessions,
 )
 
 
@@ -44,6 +47,16 @@ def zip_bytes():
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         archive.writestr("sample.csv", "TradDt\n2025-10-31\n")
+    return buffer.getvalue()
+
+
+def zip_bytes_with_members(*names):
+    import io
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        for name in names:
+            archive.writestr(name, "TradDt\n2025-10-31\n")
     return buffer.getvalue()
 
 
@@ -103,6 +116,17 @@ def test_load_session_calendar_rejects_duplicates(tmp_path):
 
     with pytest.raises(TradingCalendarError, match="duplicate session"):
         load_session_calendar(source)
+
+
+def test_research_sessions_excludes_special_sessions_by_default():
+    sessions = (
+        TradingSession(date(2025, 10, 20), "NORMAL", "NSE holiday API"),
+        TradingSession(date(2025, 10, 21), "SPECIAL", "Muhurat"),
+        TradingSession(date(2025, 10, 23), "NORMAL", "NSE holiday API"),
+    )
+
+    assert research_sessions(sessions) == (sessions[0], sessions[2])
+    assert research_sessions(sessions, include_special=True) == sessions
 
 
 def test_committed_v0_calendar_contains_expected_special_sessions():
@@ -173,3 +197,52 @@ def test_download_cm_udiff_file_rejects_non_zip_content(tmp_path):
             tmp_path,
             fetch_bytes=lambda url: b"not a zip",
         )
+
+
+def test_download_cm_udiff_file_rejects_zip_without_one_csv(tmp_path):
+    with pytest.raises(UDiffAcquisitionError, match="exactly one CSV"):
+        download_cm_udiff_file(
+            date(2025, 10, 31),
+            tmp_path,
+            fetch_bytes=lambda url: zip_bytes_with_members("one.csv", "two.csv"),
+        )
+
+
+def test_download_cm_udiff_file_retries_transient_errors(tmp_path):
+    attempts = []
+
+    def fetch(url):
+        attempts.append(url)
+        if len(attempts) < 3:
+            raise UDiffDownloadRetryableError("temporary")
+        return zip_bytes()
+
+    path = download_cm_udiff_file(
+        date(2025, 10, 31),
+        tmp_path,
+        fetch_bytes=fetch,
+        max_retries=2,
+        retry_delay_seconds=0,
+    )
+
+    assert path.exists()
+    assert len(attempts) == 3
+
+
+def test_download_cm_udiff_file_does_not_retry_archive_not_found(tmp_path):
+    attempts = []
+
+    def fetch(url):
+        attempts.append(url)
+        raise UDiffArchiveNotFoundError("not found")
+
+    with pytest.raises(UDiffArchiveNotFoundError):
+        download_cm_udiff_file(
+            date(2025, 10, 31),
+            tmp_path,
+            fetch_bytes=fetch,
+            max_retries=3,
+            retry_delay_seconds=0,
+        )
+
+    assert len(attempts) == 1
