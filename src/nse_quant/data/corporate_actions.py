@@ -25,6 +25,10 @@ class CorporateActionType(str, Enum):
     UNSUPPORTED = "unsupported"
 
 
+class UnsupportedCorporateActionError(RuntimeError):
+    """Raised when adjustment factors are requested for quarantined actions."""
+
+
 @dataclass(frozen=True)
 class CorporateActionRecord:
     symbol: str
@@ -81,6 +85,12 @@ def parse_corporate_action(record: CorporateActionRecord) -> ParsedCorporateActi
         )
 
     if has_bonus:
+        if _has_unsupported_bonus_instrument(purpose):
+            return _unsupported(
+                record,
+                "Bonus instrument is not an equity-share bonus issue; quarantine for manual review.",
+            )
+
         ratio = _parse_bonus_ratio(purpose)
         if ratio is not None:
             new_shares, old_shares = ratio
@@ -161,7 +171,10 @@ def factors_for_date(
         if action.symbol != clean_symbol:
             continue
         if action.action_type == CorporateActionType.UNSUPPORTED:
-            continue
+            raise UnsupportedCorporateActionError(
+                f"{action.symbol}: unsupported corporate action on "
+                f"{action.ex_date}: {action.purpose}"
+            )
         if bar_date >= action.ex_date:
             continue
         price_factor = _factor(price_factor * action.price_adjustment_factor)
@@ -180,6 +193,10 @@ def _factor(amount: Decimal) -> Decimal:
 
 def _has_split_token(value: str) -> bool:
     return "split" in value or "sub-division" in value or "sub division" in value
+
+
+def _has_unsupported_bonus_instrument(value: str) -> bool:
+    return re.search(r"\bbonus\s+(?:debentures?|preference)\b", value) is not None
 
 
 def _parse_bonus_ratio(value: str) -> tuple[Decimal, Decimal] | None:
@@ -202,6 +219,8 @@ def _parse_bonus_ratio(value: str) -> tuple[Decimal, Decimal] | None:
     numerator = Decimal(match.group(1))
     denominator = Decimal(match.group(2))
     if numerator <= 0 or denominator <= 0:
+        return None
+    if denominator > Decimal("20"):
         return None
     return numerator, denominator
 
