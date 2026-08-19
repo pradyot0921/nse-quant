@@ -250,3 +250,19 @@ Each entry should record:
 
 **Affected experiments:** Corporate-action adjustment, data loader, universe construction, and all downstream backtests  
 **Rerun required:** No, decision made before first corporate-action validation run
+
+---
+
+## D-017 — Ignored corporate actions and validation gate
+
+**Date:** 19 August 2026  
+**Status:** Accepted
+
+**Old rule:** Unsupported corporate actions covered both recognised no-op records such as dividends and genuinely unsafe or ambiguous corporate-action text. `factors_for_date()` raised when it encountered any unsupported action for the symbol.
+
+**New rule:** Known no-price-adjustment events parse as `IGNORED` with neutral price and volume factors. This includes dividends, AGMs, EGMs, board meetings, and name changes. Genuinely unrecognised, ambiguous, or price-continuity-affecting events remain `UNSUPPORTED`. Dataset construction must call `validate_actions()` once for the frozen symbol set and date range, and must halt or quarantine if unsupported matching actions are present. `factors_for_date()` is a pure factor lookup that assumes validated input.
+
+**Reason:** Dividends are common in large-cap Indian equities and should not block price-series adjustment when V0 explicitly does not dividend-adjust. At the same time, silently ignoring unknown events would risk corrupting historical prices. Splitting ignored from unsupported actions keeps the parser conservative without making real NSE corporate-action files unusable.
+
+**Affected experiments:** Corporate-action adjustment, data loader, universe construction, and all downstream backtests  
+**Rerun required:** No, decision made before first corporate-action validation run
