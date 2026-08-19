@@ -108,6 +108,96 @@ def test_adjust_ohlcv_applies_backward_factors_and_preserves_raw_values():
     assert adjusted[1].volume_factor == Decimal("1")
 
 
+def test_patanjali_real_bonus_bars_have_adjusted_continuity():
+    action = parse_corporate_action(
+        record("Bonus 2:1", symbol="PATANJALI", ex_date=date(2025, 9, 11))
+    )
+    raw_bars = [
+        bar(
+            symbol="PATANJALI",
+            bar_date=date(2025, 9, 10),
+            open="1810.00",
+            high="1810.00",
+            low="1788.00",
+            close="1802.00",
+            volume="5000",
+            isin="INE619A01035",
+        ),
+        bar(
+            symbol="PATANJALI",
+            bar_date=date(2025, 9, 11),
+            open="602.70",
+            high="603.50",
+            low="589.50",
+            close="598.90",
+            volume="15000",
+            isin="INE619A01035",
+        ),
+    ]
+
+    adjusted = adjust_ohlcv_bars(raw_bars, [action])
+
+    assert adjusted[0].adjusted_close == Decimal("600.666667")
+    assert adjusted[0].adjusted_volume == Decimal("15000.000000")
+    assert adjusted[1].adjusted_open == Decimal("602.700000")
+    assert adjusted[1].adjusted_close == Decimal("598.900000")
+
+    raw_close_to_open_ratio = raw_bars[1].open / raw_bars[0].close
+    adjusted_close_to_open_ratio = (
+        adjusted[1].adjusted_open / adjusted[0].adjusted_close
+    )
+
+    assert Decimal("0.33") <= raw_close_to_open_ratio <= Decimal("0.34")
+    assert Decimal("0.99") <= adjusted_close_to_open_ratio <= Decimal("1.01")
+
+
+def test_beml_real_split_bars_have_adjusted_continuity_and_isin_change():
+    action = parse_corporate_action(
+        record(
+            "Face Value Split (Sub-Division) - From Rs 10/- Per Share To Rs 5/- Per Share",
+            symbol="BEML",
+            ex_date=date(2025, 11, 3),
+        )
+    )
+    raw_bars = [
+        bar(
+            symbol="BEML",
+            bar_date=date(2025, 10, 31),
+            open="4453.70",
+            high="4464.90",
+            low="4362.50",
+            close="4399.80",
+            volume="349959",
+            isin="INE258A01016",
+        ),
+        bar(
+            symbol="BEML",
+            bar_date=date(2025, 11, 3),
+            open="2188.00",
+            high="2223.00",
+            low="2165.30",
+            close="2187.00",
+            volume="333246",
+            isin="INE258A01024",
+        ),
+    ]
+
+    adjusted = adjust_ohlcv_bars(raw_bars, [action])
+
+    assert adjusted[0].adjusted_close == Decimal("2199.900000")
+    assert adjusted[0].adjusted_volume == Decimal("699918.000000")
+    assert adjusted[1].adjusted_open == Decimal("2188.000000")
+    assert adjusted[1].adjusted_close == Decimal("2187.000000")
+
+    raw_close_to_open_ratio = raw_bars[1].open / raw_bars[0].close
+    adjusted_close_to_open_ratio = (
+        adjusted[1].adjusted_open / adjusted[0].adjusted_close
+    )
+
+    assert Decimal("0.49") <= raw_close_to_open_ratio <= Decimal("0.51")
+    assert Decimal("0.99") <= adjusted_close_to_open_ratio <= Decimal("1.01")
+
+
 def test_adjust_ohlcv_allows_isin_change_with_split_on_same_date():
     action = parse_corporate_action(
         record(
