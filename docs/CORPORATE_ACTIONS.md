@@ -1,7 +1,7 @@
 # Corporate-Action Adjustment Notes
 
 **Status:** Phase 1 implementation note  
-**Decision anchor:** D-016, D-017, and D-018 in `docs/DECISIONS.md`
+**Decision anchor:** D-016 and D-017 in `docs/DECISIONS.md`
 
 ## V1 Supported Actions
 
