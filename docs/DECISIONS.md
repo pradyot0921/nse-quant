@@ -416,3 +416,39 @@ If a UDiFF file exists on a date absent from the checked-in calendar, the loader
 
 **Affected experiments:** UDiFF loader, data validation, universe construction, execution simulation, and all downstream Phase 1 backtests
 **Rerun required:** No market-data pipeline or universe has been frozen yet.
+
+---
+
+## D-026 — CM-UDiFF traded-value VWAP range invariant
+
+**Date:** 20 August 2026
+**Status:** Accepted
+
+**Old rule:** D-024 made `TtlTrfVal` the authoritative CM-UDiFF traded-value field but did not define a row-level integrity check for field misalignment, unit changes, or corrupted traded-value data.
+
+**New rule:** For every valid CM-UDiFF `EQ` row, `TtlTrfVal / TtlTradgVol` must lie inside the inclusive daily low/high range: `LwPric <= implied_vwap <= HghPric`. A violation is a data-quality failure for that row/file and must not silently fall back to close multiplied by volume.
+
+**Evidence:** In the 31 October 2025 CM-UDiFF file, BEML has `TtlTrfVal=1554003341.40` and `TtlTradgVol=349959`, implying VWAP 4440.53, which lies between official low 4382.90 and high 4505.00.
+
+**Reason:** The invariant is a cheap check that the raw traded-value and volume fields are aligned with the OHLC fields. It catches likely schema shifts, unit changes, or row corruption before liquidity ranking or validation consumes the data.
+
+**Affected experiments:** UDiFF loader, data validation, universe construction, and all downstream Phase 1 backtests
+**Rerun required:** No market-data pipeline or universe has been frozen yet.
+
+---
+
+## D-027 — Missing tradeable-bar tolerance and mid-position handling
+
+**Date:** 20 August 2026
+**Status:** Accepted
+
+**Old rule:** D-025 stated that a missing valid tradeable bar inside the lookback or research window is an exclusion, but did not define tolerance. Taken literally, a single halted session across a decade would exclude an otherwise usable large-cap candidate.
+
+**New rule:** V0 universe candidates may have a small number of missing or invalid tradeable `EQ` bars, but only within both limits: no more than 0.5% of expected trading sessions in the research window, and no run longer than 3 consecutive expected sessions. The universe-freeze artifact must report every missing or invalid symbol/date counted under this rule. A candidate exceeding either limit is excluded before B001 results are viewed.
+
+In the backtester, a missing valid bar for a held symbol means no fill can occur for that symbol on that session. Pending exits remain pending and retry on the next valid tradeable bar, consistent with D-012. NAV may use the last valid adjusted close for mark-to-market on the missing session only with an explicit stale-price flag in reporting; this does not create an OHLCV bar, execution price, or volume. A missing bar for a candidate not currently held makes that symbol ineligible for new entry on that rebalance date.
+
+**Reason:** Isolated halts or data-quality gaps should not automatically remove a large-cap candidate from a decade-long V0 study, but prolonged suspension or repeated missing data changes the research object. Separating loader bar construction from backtester stale valuation keeps reproducibility without inventing tradeable prices.
+
+**Affected experiments:** UDiFF loader, data validation, universe construction, backtester, execution simulation, reporting, and all downstream Phase 1 backtests
+**Rerun required:** No market-data pipeline, universe, or strategy run has been frozen yet.
