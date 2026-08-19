@@ -6,6 +6,7 @@ import pytest
 from nse_quant.data.corporate_actions import (
     CorporateActionRecord,
     CorporateActionType,
+    UnsupportedCorporateActionError,
     factors_for_date,
     parse_corporate_action,
 )
@@ -103,6 +104,22 @@ def test_bonus_repeating_decimal_factor_is_quantized():
     assert action.volume_adjustment_factor == Decimal("1.5000000000")
 
 
+def test_bonus_debentures_are_not_equity_bonus_shares():
+    action = parse_corporate_action(record("Bonus debentures 1:1"))
+
+    assert action.action_type == CorporateActionType.UNSUPPORTED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
+def test_bonus_preference_issue_is_unsupported():
+    action = parse_corporate_action(record("Bonus preference shares 1:1"))
+
+    assert action.action_type == CorporateActionType.UNSUPPORTED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
 def test_unsupported_action_is_quarantined_without_adjustment():
     action = parse_corporate_action(record("Interim dividend Rs. 2 per share"))
 
@@ -144,6 +161,14 @@ def test_malformed_bonus_is_unsupported():
     assert action.volume_adjustment_factor == Decimal("1")
 
 
+def test_bonus_with_time_like_colon_token_is_unsupported():
+    action = parse_corporate_action(record("Bonus issue board meeting at 12:30"))
+
+    assert action.action_type == CorporateActionType.UNSUPPORTED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
 def test_factors_apply_only_before_ex_date_for_matching_symbol():
     split = parse_corporate_action(record("Split from Rs. 10/- to Rs. 5/-"))
     bonus = parse_corporate_action(record("Bonus issue 1:1"))
@@ -154,10 +179,30 @@ def test_factors_apply_only_before_ex_date_for_matching_symbol():
     before = factors_for_date("ABC", date(2026, 8, 18), [split, bonus, other_symbol])
     on_ex_date = factors_for_date("ABC", EX_DATE, [split, bonus, other_symbol])
 
-    assert before.price == Decimal("0.2500000000")
-    assert before.volume == Decimal("4.0000000000")
+    assert before.price == Decimal("0.25")
+    assert before.volume == Decimal("4")
     assert on_ex_date.price == Decimal("1")
     assert on_ex_date.volume == Decimal("1")
+
+
+def test_factors_refuse_unsupported_matching_action():
+    unsupported = parse_corporate_action(
+        record("Rights issue of equity shares 1:4 at Rs. 10")
+    )
+
+    with pytest.raises(UnsupportedCorporateActionError, match="ABC"):
+        factors_for_date("ABC", date(2026, 8, 1), [unsupported])
+
+
+def test_factors_ignore_unsupported_action_for_other_symbol():
+    unsupported = parse_corporate_action(
+        record("Rights issue of equity shares 1:4 at Rs. 10", symbol="XYZ")
+    )
+
+    factors = factors_for_date("ABC", date(2026, 8, 1), [unsupported])
+
+    assert factors.price == Decimal("1")
+    assert factors.volume == Decimal("1")
 
 
 def test_record_validation_rejects_missing_symbol_or_purpose():
