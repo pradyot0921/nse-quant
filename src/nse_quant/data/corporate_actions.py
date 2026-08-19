@@ -276,7 +276,11 @@ def validate_rights_exclusions(
     start_date: date | None = None,
     end_date: date | None = None,
 ) -> None:
-    """Raise if V0 universe symbols have rights issues in the research window."""
+    """Raise if V0 universe candidates have rights issues in the research window.
+
+    This is a universe-selection guard. The OHLCV adjustment path does not call
+    it because rights issues already halt there as unsupported actions.
+    """
 
     clean_symbols = {symbol.strip().upper() for symbol in symbols}
     for action in actions:
@@ -299,16 +303,7 @@ def validate_isin_continuity(
 ) -> None:
     """Raise when an ISIN change has no same-date corporate-action record."""
 
-    action_index = {
-        (action.symbol, action.ex_date)
-        for action in actions
-        if action.action_type
-        in {
-            CorporateActionType.SPLIT,
-            CorporateActionType.BONUS,
-            CorporateActionType.UNSUPPORTED,
-        }
-    }
+    action_index = {(action.symbol, action.ex_date) for action in actions}
     previous_by_symbol: dict[str, OHLCVBar] = {}
     for bar in sorted(bars, key=lambda item: (item.symbol, item.bar_date)):
         previous = previous_by_symbol.get(bar.symbol)
@@ -321,8 +316,7 @@ def validate_isin_continuity(
         ):
             raise MissingCorporateActionError(
                 f"{bar.symbol}: ISIN changed from {previous.isin} to "
-                f"{bar.isin} on {bar.bar_date} without a same-date "
-                "split, bonus, or quarantined corporate action"
+                f"{bar.isin} on {bar.bar_date} without a same-date corporate action"
             )
         previous_by_symbol[bar.symbol] = bar
 

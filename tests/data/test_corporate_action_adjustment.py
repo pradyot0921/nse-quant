@@ -151,6 +151,21 @@ def test_adjust_ohlcv_refuses_unexplained_isin_change():
         adjust_ohlcv_bars(raw_bars, [])
 
 
+def test_adjust_ohlcv_allows_isin_change_with_ignored_action_on_same_date():
+    dividend = parse_corporate_action(
+        record("Interim Dividend Rs. 8 Per Share", ex_date=date(2025, 11, 3))
+    )
+    raw_bars = [
+        bar(bar_date=date(2025, 10, 31), isin="INE000A01010"),
+        bar(bar_date=date(2025, 11, 3), isin="INE000A01028"),
+    ]
+
+    adjusted = adjust_ohlcv_bars(raw_bars, [dividend])
+
+    assert adjusted[1].price_factor == Decimal("1")
+    assert adjusted[1].volume_factor == Decimal("1")
+
+
 def test_adjust_ohlcv_rejects_binary_float_prices():
     with pytest.raises(TypeError, match="binary float"):
         bar(open=100.0)

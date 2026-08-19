@@ -299,7 +299,7 @@ UNSUPPORTED=82
 
 **Old rule:** Bonus ratio convention was inferred from market convention but not validated against raw NSE price data. Buybacks were classified as `UNSUPPORTED`. V0 did not explicitly state how rights issues affect universe selection. The data-validation layer did not define an independent check for corporate-action records missing from the NSE corporate-action file.
 
-**New rule:** NSE bonus ratios are interpreted as new shares per existing shares: `Bonus X:Y` means X new shares for Y held shares. Buyback records labelled `Buy Back` are `IGNORED` for price and volume adjustment because neither tender-offer buybacks nor open-market buybacks multiply or dilute the holdings of non-participating shareholders. V0 excludes any symbol with a rights issue inside the research window from the frozen universe unless a later decision adds deterministic rights adjustment support. During OHLCV validation, an ISIN change from the prior session with no same-date `SPLIT`, `BONUS`, or `UNSUPPORTED` corporate-action record must halt or quarantine the symbol/date as a possible missing corporate action.
+**New rule:** NSE bonus ratios are interpreted as new shares per existing shares: `Bonus X:Y` means X new shares for Y held shares. Buyback records labelled `Buy Back` are `IGNORED` for price and volume adjustment because neither tender-offer buybacks nor open-market buybacks multiply or dilute the holdings of non-participating shareholders. V0 excludes any symbol with a rights issue inside the research window from the frozen universe unless a later decision adds deterministic rights adjustment support. During OHLCV validation, an ISIN change from the prior session with no same-date corporate-action record of any type must halt or quarantine the symbol/date as a possible missing corporate action.
 
 **Evidence:** Official NSE CM-UDiFF bhavcopy checks:
 
@@ -312,3 +312,19 @@ UNSUPPORTED=82
 
 **Affected experiments:** Corporate-action adjustment, data loader, universe construction, and all downstream backtests
 **Rerun required:** No completed strategy runs exist; rerun the corporate-action corpus scan and price-continuity checks before universe freeze
+
+---
+
+## D-020 — Universe liquidity ranking uses raw traded value
+
+**Date:** 19 August 2026
+**Status:** Accepted
+
+**Old rule:** V0 universe selection required high median daily traded value but did not specify whether traded value is computed from raw or adjusted OHLCV fields when an explicit turnover field is unavailable.
+
+**New rule:** Universe selection ranks liquidity using the exchange-provided raw traded value or, if unavailable, raw close multiplied by raw volume. Do not compute median daily traded value from adjusted price multiplied by adjusted volume.
+
+**Reason:** Traded value is economically invariant: the rupees exchanged on a historical session are the raw price-volume product for that session. Adjusted price multiplied by adjusted volume should be close but can drift because both adjusted fields are quantized, adding needless imprecision to universe ranking.
+
+**Affected experiments:** Universe construction, data validation, and all downstream Phase 1 backtests
+**Rerun required:** No universe has been frozen yet.

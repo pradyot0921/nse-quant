@@ -1,7 +1,7 @@
 # Corporate-Action Adjustment Notes
 
 **Status:** Phase 1 implementation note  
-**Decision anchor:** D-016, D-017, D-018, and D-019 in `docs/DECISIONS.md`
+**Decision anchor:** D-016, D-017, D-018, D-019, and D-020 in `docs/DECISIONS.md`
 
 ## V1 Supported Actions
 
@@ -42,7 +42,7 @@ factor.
 
 Rights issues remain unsupported in V0. A symbol with a rights issue inside the research window is excluded from the frozen V0 universe unless a later decision adds deterministic rights adjustment support.
 
-UDiFF row-level ISIN changes are an independent validation signal. If a symbol's ISIN changes from the prior session and there is no same-date split, bonus, or quarantined corporate-action record, the loader must halt or quarantine the symbol/date as a possible missing corporate action.
+UDiFF row-level ISIN changes are an independent validation signal. If a symbol's ISIN changes from the prior session and there is no same-date corporate-action record of any type, the loader must halt or quarantine the symbol/date as a possible missing corporate action.
 
 ## Ambiguous Or Combined Events
 
@@ -68,6 +68,8 @@ Corporate-action factors are `Decimal` values quantized to 10 decimal places usi
 Adjusted OHLC prices are quantized to `Decimal("0.000001")` rupees after applying cumulative factors. Adjusted volume is adjusted alongside price and quantized to six decimal places.
 
 Final accounting and NAV values still use the separate money precision documented for portfolio accounting.
+
+Universe liquidity ranking must use raw traded value, or raw close multiplied by raw volume when the exchange traded-value field is unavailable. It must not use adjusted price multiplied by adjusted volume.
 
 ## Required Messy Tests
 
