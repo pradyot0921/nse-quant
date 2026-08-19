@@ -17,6 +17,10 @@ https://www.nseindia.com/api/holiday-master?type=trading&year=2026
 using the `CM` segment holiday list, weekdays, and explicit special-session
 exceptions.
 
+The derivation direction matters: the 245 normal sessions were generated from
+NSE's `CM` holiday data before comparing against downloaded CM-UDiFF archive
+existence. They were not fitted to the set of files that happened to download.
+
 The source page for the NSE holiday API is:
 
 ```text
@@ -42,12 +46,28 @@ https://nsearchives.nseindia.com/content/cm/BhavCopy_NSE_CM_0_0_0_YYYYMMDD_F_000
 | Expected sessions without UDiFF file | 0 |
 | UDiFF files outside checked-in sessions | 0 |
 
+The independent normal-session calendar and observed archive list had no
+missing expected-session files. The only observed archives outside the
+weekday-minus-holiday calendar were the two special sessions listed below.
+
 ## Special Sessions
 
 | Date | Reason | Evidence |
 | --- | --- | --- |
 | 2025-10-21 | Diwali Muhurat trading | NSE CM holiday list marks Diwali Laxmi Pujan as a holiday; CM-UDiFF archive exists |
 | 2026-02-01 | Union Budget Sunday trading | Date is a Sunday; CM-UDiFF archive exists |
+
+The 21 October 2025 Muhurat file was inspected directly. Its `SsnId` was `F1`,
+the same session identifier observed in normal-session files, and it contained
+2,291 `EQ` rows. `SsnId` therefore cannot be used as the V0 special-session
+detector; the checked-in calendar is the source of truth.
+
+V0 keeps special sessions in the calendar for raw-file auditing but excludes
+them from the default research bar series. Research helpers must return only
+`NORMAL` sessions unless a caller explicitly opts into special sessions. This
+prevents one-hour Muhurat trading or other unusual exchange sessions from being
+counted as ordinary momentum lookback days or execution/signal sessions by
+omission.
 
 ## Listing-Day Probe
 
@@ -97,3 +117,13 @@ Pipeline validation must fail or quarantine when:
 The calendar must be extended by committing the new year holiday source,
 generated sessions, and any special-session exceptions before that year enters
 a research run.
+
+## Full-Window Dependency
+
+This artifact validates only one year. The full V0 research window needs a
+roughly decade-long checked-in session calendar before universe selection can
+run. NSE's current holiday API was validated for 2025 and 2026 in this pass;
+older-year availability remains an explicit unresolved dependency. If official
+NSE historical holiday data cannot be obtained for earlier years, deriving a
+calendar from archive existence may become necessary, but that would weaken the
+missing-file audit and must be documented before the universe freeze.
