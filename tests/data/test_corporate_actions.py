@@ -58,6 +58,51 @@ def test_parse_fractional_bonus_ratio():
     assert action.volume_adjustment_factor == Decimal("1.6")
 
 
+def test_bonus_ratio_ignores_slash_separated_record_date():
+    action = parse_corporate_action(
+        record("Bonus record date 12/08/2026 ratio 1:1")
+    )
+
+    assert action.action_type == CorporateActionType.BONUS
+    assert action.price_adjustment_factor == Decimal("0.5")
+    assert action.volume_adjustment_factor == Decimal("2")
+
+
+def test_bonus_ratio_does_not_accept_slash_separator():
+    action = parse_corporate_action(record("Bonus issue in the ratio of 1/1"))
+
+    assert action.action_type == CorporateActionType.UNSUPPORTED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
+def test_bonus_with_multiple_ratio_tokens_is_unsupported():
+    action = parse_corporate_action(record("Bonus issue 1:1 and revised ratio 2:3"))
+
+    assert action.action_type == CorporateActionType.UNSUPPORTED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
+def test_combined_split_and_bonus_is_quarantined():
+    action = parse_corporate_action(
+        record("Face value split from Rs.10/- to Rs.2/- and bonus 1:1")
+    )
+
+    assert action.action_type == CorporateActionType.UNSUPPORTED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+    assert "Combined split and bonus" in action.note
+
+
+def test_bonus_repeating_decimal_factor_is_quantized():
+    action = parse_corporate_action(record("Bonus issue 1:2"))
+
+    assert action.action_type == CorporateActionType.BONUS
+    assert action.price_adjustment_factor == Decimal("0.6666666667")
+    assert action.volume_adjustment_factor == Decimal("1.5000000000")
+
+
 def test_unsupported_action_is_quarantined_without_adjustment():
     action = parse_corporate_action(record("Interim dividend Rs. 2 per share"))
 
@@ -75,6 +120,30 @@ def test_malformed_split_is_unsupported():
     assert action.volume_adjustment_factor == Decimal("1")
 
 
+def test_consolidation_is_unsupported_for_v1():
+    action = parse_corporate_action(record("Consolidation of shares from Rs.1/- to Rs.10/-"))
+
+    assert action.action_type == CorporateActionType.UNSUPPORTED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
+def test_rights_issue_is_unsupported_for_v1():
+    action = parse_corporate_action(record("Rights issue of equity shares 1:4 at Rs. 10"))
+
+    assert action.action_type == CorporateActionType.UNSUPPORTED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
+def test_malformed_bonus_is_unsupported():
+    action = parse_corporate_action(record("Bonus record date 12/08/2026"))
+
+    assert action.action_type == CorporateActionType.UNSUPPORTED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
 def test_factors_apply_only_before_ex_date_for_matching_symbol():
     split = parse_corporate_action(record("Split from Rs. 10/- to Rs. 5/-"))
     bonus = parse_corporate_action(record("Bonus issue 1:1"))
@@ -85,8 +154,8 @@ def test_factors_apply_only_before_ex_date_for_matching_symbol():
     before = factors_for_date("ABC", date(2026, 8, 18), [split, bonus, other_symbol])
     on_ex_date = factors_for_date("ABC", EX_DATE, [split, bonus, other_symbol])
 
-    assert before.price == Decimal("0.25")
-    assert before.volume == Decimal("4")
+    assert before.price == Decimal("0.2500000000")
+    assert before.volume == Decimal("4.0000000000")
     assert on_ex_date.price == Decimal("1")
     assert on_ex_date.volume == Decimal("1")
 
