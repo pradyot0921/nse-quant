@@ -79,6 +79,12 @@ def parse_corporate_action(record: CorporateActionRecord) -> ParsedCorporateActi
     has_bonus = "bonus" in purpose
     has_split = _has_split_token(purpose)
 
+    if "scheme of arrangement" in purpose:
+        return _unsupported(
+            record,
+            "Scheme of arrangement requires corporate-reorganisation support; quarantine for manual review.",
+        )
+
     if has_bonus and has_split:
         return _unsupported(
             record,
@@ -240,7 +246,27 @@ def _has_split_token(value: str) -> bool:
 
 
 def _has_unsupported_bonus_instrument(value: str) -> bool:
-    return re.search(r"\bbonus\s+(?:debentures?|preference)\b", value) is not None
+    unsupported_instruments = [
+        r"debentures?",
+        r"preference",
+        r"ncrps",
+        r"ncds?",
+        r"crps",
+        r"ocrps",
+        r"warrants?",
+    ]
+    if re.search(rf"\bbonus\s+(?:{'|'.join(unsupported_instruments)})\b", value):
+        return True
+
+    match = re.search(r"\bbonus\b\s*([a-z0-9:./-]+)?", value)
+    if match is None:
+        return False
+    next_token = match.group(1)
+    if next_token is None:
+        return False
+    if re.fullmatch(r"\d+(?:\.\d+)?:\d+(?:\.\d+)?", next_token):
+        return False
+    return next_token not in {"issue", "shares", "share", "equity", "ratio", "record"}
 
 
 def _has_ignored_noop_event(value: str) -> bool:
@@ -285,7 +311,11 @@ def _parse_bonus_ratio(value: str) -> tuple[Decimal, Decimal] | None:
 
 def _parse_split_face_values(value: str) -> tuple[Decimal, Decimal] | None:
     money = r"(?:rs\.?|re\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:/-)?"
-    match = re.search(rf"from\s+{money}\s+(?:to|into)\s+{money}", value)
+    per_share = r"(?:\s+per\s+share)?"
+    match = re.search(
+        rf"from\s+{money}{per_share}\s+(?:to|into)\s+{money}{per_share}",
+        value,
+    )
     if match is None:
         return None
 
