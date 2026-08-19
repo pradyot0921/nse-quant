@@ -410,9 +410,63 @@ If a UDiFF file exists on a date absent from the checked-in calendar, the loader
 
 **New rule:** A CM-UDiFF `EQ` row with non-positive `TtlTradgVol` or non-positive `TtlTrfVal` is not a valid tradeable OHLCV bar in V0. The loader must report or quarantine the symbol/date and must not carry prices forward, fabricate OHLC values, or allow such a row into execution simulation. Zero, blank, or non-positive OHLC fields in an `EQ` row are data-quality failures for V0 bar construction. Universe selection must treat missing valid tradeable bars inside the required lookback or research window as an exclusion unless a later decision defines a different missing-bar policy.
 
-**Evidence:** The five inspected CM-UDiFF files dated 10 September 2025, 11 September 2025, 31 October 2025, 3 November 2025, and 13 July 2026 contained no zero-volume rows, including no zero-volume `EQ` rows. The policy is therefore pre-registered before encountering the failure mode in the loader.
+**Evidence:** The five inspected CM-UDiFF files dated 10 September 2025, 11 September 2025, 31 October 2025, 3 November 2025, and 13 July 2026 contained no zero-volume rows, including no zero-volume `EQ` rows. This is limited sample evidence, not proof that suspended, halted, or otherwise untraded rows cannot appear across the full research window. The policy is therefore pre-registered before encountering the failure mode in the loader.
 
 **Reason:** A zero-volume row cannot represent an executable session for the strategy. Carrying forward prices would invent tradable data, while allowing zero prices would violate the positive-price invariant already enforced by `OHLCVBar`.
 
 **Affected experiments:** UDiFF loader, data validation, universe construction, execution simulation, and all downstream Phase 1 backtests
 **Rerun required:** No market-data pipeline or universe has been frozen yet.
+
+---
+
+## D-026 — CM-UDiFF traded-value VWAP range invariant
+
+**Date:** 20 August 2026
+**Status:** Accepted
+
+**Old rule:** D-024 made `TtlTrfVal` the authoritative CM-UDiFF traded-value field but did not define a row-level integrity check for field misalignment, unit changes, or corrupted traded-value data.
+
+**New rule:** For every valid CM-UDiFF `EQ` row, `TtlTrfVal / TtlTradgVol` must lie inside the inclusive daily low/high range after a half-paisa absolute tolerance on price: `LwPric - 0.005 <= implied_vwap <= HghPric + 0.005`. A violation is a data-quality failure for that row/file and must not silently fall back to close multiplied by volume.
+
+**Evidence:** In the 31 October 2025 CM-UDiFF file, BEML has `TtlTrfVal=1554003341.40` and `TtlTradgVol=349959`, implying VWAP 4440.53, which lies between official low 4382.90 and high 4505.00.
+
+**Reason:** The invariant is a cheap check that the raw traded-value and volume fields are aligned with the OHLC fields. It catches likely schema shifts, unit changes, or row corruption before liquidity ranking or validation consumes the data. The half-paisa tolerance allows harmless two-decimal traded-value rounding at the price boundary without weakening the check enough to mask a real unit or schema error.
+
+**Affected experiments:** UDiFF loader, data validation, universe construction, and all downstream Phase 1 backtests
+**Rerun required:** No market-data pipeline or universe has been frozen yet.
+
+---
+
+## D-027 — Missing tradeable-bar tolerance and mid-position handling
+
+**Date:** 20 August 2026
+**Status:** Accepted
+
+**Old rule:** D-025 stated that a missing valid tradeable bar inside the lookback or research window is an exclusion, but did not define tolerance. Taken literally, a single halted session across a decade would exclude an otherwise usable large-cap candidate.
+
+**New rule:** V0 universe candidates may have a small number of missing or invalid tradeable `EQ` bars, but only within both limits: no more than 0.5% of expected trading sessions in the research window, and no run longer than 3 consecutive expected sessions. The universe-freeze artifact must report every missing or invalid symbol/date counted under this rule. A candidate exceeding either limit is excluded before B001 results are viewed.
+
+In the backtester, a missing valid bar for a held symbol means no fill can occur for that symbol on that session. Pending exits remain pending and retry on the next valid tradeable bar, consistent with D-012. NAV may use the last valid adjusted close for mark-to-market on the missing session only with an explicit stale-price flag in reporting; this does not create an OHLCV bar, execution price, or volume. A missing bar for a candidate not currently held makes that symbol ineligible for new entry on that rebalance date.
+
+**Reason:** Isolated halts or data-quality gaps should not automatically remove a large-cap candidate from a decade-long V0 study, but prolonged suspension or repeated missing data changes the research object. Separating loader bar construction from backtester stale valuation keeps reproducibility without inventing tradeable prices.
+
+**Affected experiments:** UDiFF loader, data validation, universe construction, backtester, execution simulation, reporting, and all downstream Phase 1 backtests
+**Rerun required:** No market-data pipeline, universe, or strategy run has been frozen yet.
+
+---
+
+## D-028 — CM-UDiFF row-level rejection model
+
+**Date:** 20 August 2026
+**Status:** Accepted
+
+**Old rule:** `parse_cm_udiff_file()` raised on the first invalid `EQ` row. A single malformed row therefore destroyed the entire trading day, even though D-025 specified reporting or quarantining the symbol/date.
+
+**New rule:** CM-UDiFF file-level failures still raise immediately: unexpected schema, empty file, multiple `TradDt` values, multiple `BizDt` values, `TradDt != BizDt`, or filename/trade-date mismatch. Row-level `EQ` failures are collected as immutable rejected rows containing row number, symbol, series, and reason. Valid `EQ` bars from the same file remain available to callers. Downstream validation decides policy: fail if rejected rows exceed the missing-bar tolerance, fail if a required universe symbol is rejected, otherwise proceed with an explicit rejection log.
+
+**Evidence:** A one-year scan of downloaded NSE CM-UDiFF files from 20 August 2025 through 19 August 2026 covered 247 files, 816,308 total rows, and 585,893 `EQ` rows. The strict row checks produced zero rejected `EQ` rows and zero file-level errors in that window. A synthetic malformed row with `PrvsClsgPric=0` reproduced the structural bug: the previous parser discarded the whole day, while the new parser quarantines only the bad symbol/date.
+
+**Reason:** Recent real data suggests the row checks are not noisy, but a decade-long run across millions of rows should not lose a full trading session because one non-universe or otherwise isolated symbol has a malformed row. Keeping row failures explicit preserves auditability while allowing universe and backtest policy to make the research-relevant decision.
+
+**Affected experiments:** UDiFF loader, data validation, universe construction, backtester, reporting, and all downstream Phase 1 backtests
+**Rerun required:** No market-data pipeline, universe, or strategy run has been frozen yet.

@@ -168,8 +168,9 @@ the correct liquidity input and close-times-volume is only an approximation.
 - OHLC fields are `OpnPric`, `HghPric`, `LwPric`, and `ClsPric`.
 - Raw volume is `TtlTradgVol`.
 - Raw traded value is `TtlTrfVal`; it is authoritative for UDiFF liquidity ranking and must be preserved.
+- `TtlTrfVal / TtlTradgVol` must lie inside the daily low/high range, with the D-026 half-paisa tolerance, for every valid `EQ` row.
 - Number of transactions is `TtlNbOfTxsExctd`.
 - The loader must explicitly select `SctySrs == EQ`; non-`EQ` rows are common and must not enter V0 silently.
-- A zero-volume or zero-traded-value `EQ` row is not a valid tradeable OHLCV bar in V0 and must be reported or quarantined rather than carried forward.
+- A zero-volume, zero-traded-value, or otherwise invalid `EQ` row is not a valid tradeable OHLCV bar in V0 and must be returned as a rejected symbol/date rather than carried forward or allowed to abort the full file.
 - Duplicate `EQ` symbols were not observed in the sampled files, but loader validation should still reject duplicates within one file.
 - BEML's official UDiFF high/low differ from the earlier hand-entered test values. The test is corrected to match these rows before loader implementation starts.
