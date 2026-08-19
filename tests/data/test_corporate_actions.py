@@ -42,6 +42,56 @@ def test_parse_split_from_subdivision_text():
     assert action.volume_adjustment_factor == Decimal("10")
 
 
+@pytest.mark.parametrize(
+    ("purpose", "price_factor", "volume_factor"),
+    [
+        (
+            "Face Value Split (Sub-Division) - From Rs 10/- Per Share To Re 1/- Per Share",
+            Decimal("0.1"),
+            Decimal("10"),
+        ),
+        (
+            "Face Value Split (Sub-Division) - From Rs 10/- Per Share To Rs 2/- Per Share",
+            Decimal("0.2"),
+            Decimal("5"),
+        ),
+        (
+            "Face Value Split (Sub-Division) - From Rs 10/- Per Share To Rs 5/- Per Share",
+            Decimal("0.5"),
+            Decimal("2"),
+        ),
+        (
+            "Face Value Split (Sub-Division) - From Rs 2/- Per Share To Re 1/- Per Share",
+            Decimal("0.5"),
+            Decimal("2"),
+        ),
+        (
+            "Face Value Split (Sub-Division) - From Rs 5/- Per Share To Re 1/- Per Share",
+            Decimal("0.2"),
+            Decimal("5"),
+        ),
+        (
+            "Face Value Split (Sub-Division) - From Rs 5/- Per Share To Rs 2/- Per Share",
+            Decimal("0.4"),
+            Decimal("2.5"),
+        ),
+        (
+            "Face Value Split (Sub-Division) - From Rs 4/- Per Share To Rs 2/- Per Share",
+            Decimal("0.5"),
+            Decimal("2"),
+        ),
+    ],
+)
+def test_real_nse_split_purposes_parse_from_face_value_per_share(
+    purpose, price_factor, volume_factor
+):
+    action = parse_corporate_action(record(purpose))
+
+    assert action.action_type == CorporateActionType.SPLIT
+    assert action.price_adjustment_factor == price_factor
+    assert action.volume_adjustment_factor == volume_factor
+
+
 def test_parse_one_for_one_bonus_adjusts_price_and_volume():
     action = parse_corporate_action(record("Bonus issue in the ratio of 1:1"))
 
@@ -115,6 +165,34 @@ def test_bonus_debentures_are_not_equity_bonus_shares():
 
 def test_bonus_preference_issue_is_unsupported():
     action = parse_corporate_action(record("Bonus preference shares 1:1"))
+
+    assert action.action_type == CorporateActionType.UNSUPPORTED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
+@pytest.mark.parametrize(
+    "purpose",
+    [
+        "Bonus NCRPS 4:1",
+        "Bonus NCD 1:1",
+        "Bonus CRPS 1:1",
+        "Bonus OCRPS 1:1",
+        "Bonus warrants 1:1",
+    ],
+)
+def test_non_equity_bonus_instruments_are_unsupported(purpose):
+    action = parse_corporate_action(record(purpose))
+
+    assert action.action_type == CorporateActionType.UNSUPPORTED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
+def test_scheme_of_arrangement_bonus_ncrps_is_unsupported():
+    action = parse_corporate_action(
+        record("Scheme Of Arrangement - Bonus Ncrps 4:1", symbol="TVSMOTOR")
+    )
 
     assert action.action_type == CorporateActionType.UNSUPPORTED
     assert action.price_adjustment_factor == Decimal("1")
