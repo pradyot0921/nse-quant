@@ -1,0 +1,4 @@
+[project]
+starting_capital_inr = "50000.00"
+cost_profile = "ZERODHA_NSE_DELIVERY_2026_08"
+dataset_label = "RESEARCH DATASET V0"

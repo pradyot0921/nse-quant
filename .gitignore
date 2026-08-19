@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Local environments and secrets
+.env
+.venv/
+venv/
+env/
+*.pem
+*.key
+
+# Local/private data
+data/raw/**
+data/processed/**
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Broker/private records
+*contract*note*
+*funds*statement*
+*ledger*private*
