@@ -380,3 +380,39 @@ If a UDiFF file exists on a date absent from the checked-in calendar, the loader
 
 **Affected experiments:** UDiFF loader, data validation, universe construction, and all downstream Phase 1 backtests
 **Rerun required:** No market-data pipeline or universe has been frozen yet.
+
+---
+
+## D-024 — NSE UDiFF traded value uses TtlTrfVal
+
+**Date:** 20 August 2026
+**Status:** Accepted
+
+**Old rule:** D-020 required universe liquidity ranking to use exchange-provided raw traded value where available, with raw close multiplied by raw volume as a fallback, but did not name the NSE CM-UDiFF traded-value field.
+
+**New rule:** For NSE CM-UDiFF input, `TtlTrfVal` is the authoritative raw traded value field for liquidity ranking and validation. The raw close multiplied by raw volume fallback may be used only when a non-UDiFF source lacks a reliable traded-value field or when a source-specific validation record explicitly documents that the field is absent or unusable. In normal CM-UDiFF files, missing, blank, zero, or non-positive `TtlTrfVal` is a data-quality event rather than a reason to silently fall back.
+
+**Evidence:** In the 31 October 2025 CM-UDiFF file, BEML has `TtlTrfVal=1554003341.40`, while `ClsPric * TtlTradgVol = 4399.80 * 349959 = 1539749608.20`, a 0.9172% understatement. The implied traded-value VWAP is 4440.53, which sits between the day's official low 4382.90 and high 4505.00.
+
+**Reason:** Close multiplied by volume is not traded value; it replaces the session's actual turnover with a closing-price approximation. Since CM-UDiFF supplies the true traded-value field, V0 should use it directly and avoid systematic liquidity-ranking error.
+
+**Affected experiments:** UDiFF loader, data validation, universe construction, and all downstream Phase 1 backtests
+**Rerun required:** No market-data pipeline or universe has been frozen yet.
+
+---
+
+## D-025 — No-trade UDiFF rows are not tradeable OHLCV bars
+
+**Date:** 20 August 2026
+**Status:** Accepted
+
+**Old rule:** The loader policy for NSE CM-UDiFF rows with zero volume, zero traded value, or zero/blank OHLC prices was unspecified. `OHLCVBar` requires positive OHLC values.
+
+**New rule:** A CM-UDiFF `EQ` row with non-positive `TtlTradgVol` or non-positive `TtlTrfVal` is not a valid tradeable OHLCV bar in V0. The loader must report or quarantine the symbol/date and must not carry prices forward, fabricate OHLC values, or allow such a row into execution simulation. Zero, blank, or non-positive OHLC fields in an `EQ` row are data-quality failures for V0 bar construction. Universe selection must treat missing valid tradeable bars inside the required lookback or research window as an exclusion unless a later decision defines a different missing-bar policy.
+
+**Evidence:** The five inspected CM-UDiFF files dated 10 September 2025, 11 September 2025, 31 October 2025, 3 November 2025, and 13 July 2026 contained no zero-volume rows, including no zero-volume `EQ` rows. The policy is therefore pre-registered before encountering the failure mode in the loader.
+
+**Reason:** A zero-volume row cannot represent an executable session for the strategy. Carrying forward prices would invent tradable data, while allowing zero prices would violate the positive-price invariant already enforced by `OHLCVBar`.
+
+**Affected experiments:** UDiFF loader, data validation, universe construction, execution simulation, and all downstream Phase 1 backtests
+**Rerun required:** No market-data pipeline or universe has been frozen yet.
