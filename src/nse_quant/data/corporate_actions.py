@@ -303,7 +303,11 @@ def validate_isin_continuity(
 ) -> None:
     """Raise when an ISIN change has no same-date corporate-action record."""
 
-    action_index = {(action.symbol, action.ex_date) for action in actions}
+    action_index = {
+        (action.symbol, action.ex_date)
+        for action in actions
+        if _can_explain_isin_change(action)
+    }
     previous_by_symbol: dict[str, OHLCVBar] = {}
     for bar in sorted(bars, key=lambda item: (item.symbol, item.bar_date)):
         previous = previous_by_symbol.get(bar.symbol)
@@ -434,6 +438,26 @@ def _has_ignored_noop_event(value: str) -> bool:
         r"\bbuy back\b",
     ]
     return any(re.search(pattern, value) is not None for pattern in ignored_patterns)
+
+
+def _can_explain_isin_change(action: ParsedCorporateAction) -> bool:
+    if action.action_type in {
+        CorporateActionType.SPLIT,
+        CorporateActionType.BONUS,
+        CorporateActionType.UNSUPPORTED,
+    }:
+        return True
+    if action.action_type != CorporateActionType.IGNORED:
+        return False
+    return _has_ignored_identifier_event(_normalise_text(action.purpose))
+
+
+def _has_ignored_identifier_event(value: str) -> bool:
+    identifier_patterns = [
+        r"\bchange(?:d)? in name\b",
+        r"\bname change\b",
+    ]
+    return any(re.search(pattern, value) is not None for pattern in identifier_patterns)
 
 
 def _parse_bonus_ratio(value: str) -> tuple[Decimal, Decimal] | None:

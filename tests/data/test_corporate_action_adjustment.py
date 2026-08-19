@@ -141,17 +141,7 @@ def test_adjust_ohlcv_allows_isin_change_with_split_on_same_date():
     assert adjusted[1].adjusted_open == Decimal("2188.000000")
 
 
-def test_adjust_ohlcv_refuses_unexplained_isin_change():
-    raw_bars = [
-        bar(bar_date=date(2025, 10, 31), isin="INE000A01010"),
-        bar(bar_date=date(2025, 11, 3), isin="INE000A01028"),
-    ]
-
-    with pytest.raises(MissingCorporateActionError, match="ISIN changed"):
-        adjust_ohlcv_bars(raw_bars, [])
-
-
-def test_adjust_ohlcv_allows_isin_change_with_ignored_action_on_same_date():
+def test_adjust_ohlcv_refuses_isin_change_with_dividend_on_same_date():
     dividend = parse_corporate_action(
         record("Interim Dividend Rs. 8 Per Share", ex_date=date(2025, 11, 3))
     )
@@ -160,10 +150,33 @@ def test_adjust_ohlcv_allows_isin_change_with_ignored_action_on_same_date():
         bar(bar_date=date(2025, 11, 3), isin="INE000A01028"),
     ]
 
-    adjusted = adjust_ohlcv_bars(raw_bars, [dividend])
+    with pytest.raises(MissingCorporateActionError, match="ISIN changed"):
+        adjust_ohlcv_bars(raw_bars, [dividend])
+
+
+def test_adjust_ohlcv_allows_isin_change_with_name_change_on_same_date():
+    name_change = parse_corporate_action(
+        record("Change In Name", ex_date=date(2025, 11, 3))
+    )
+    raw_bars = [
+        bar(bar_date=date(2025, 10, 31), isin="INE000A01010"),
+        bar(bar_date=date(2025, 11, 3), isin="INE000A01028"),
+    ]
+
+    adjusted = adjust_ohlcv_bars(raw_bars, [name_change])
 
     assert adjusted[1].price_factor == Decimal("1")
     assert adjusted[1].volume_factor == Decimal("1")
+
+
+def test_adjust_ohlcv_refuses_unexplained_isin_change():
+    raw_bars = [
+        bar(bar_date=date(2025, 10, 31), isin="INE000A01010"),
+        bar(bar_date=date(2025, 11, 3), isin="INE000A01028"),
+    ]
+
+    with pytest.raises(MissingCorporateActionError, match="ISIN changed"):
+        adjust_ohlcv_bars(raw_bars, [])
 
 
 def test_adjust_ohlcv_rejects_binary_float_prices():

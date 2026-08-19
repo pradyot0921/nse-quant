@@ -42,7 +42,7 @@ factor.
 
 Rights issues remain unsupported in V0. A symbol with a rights issue inside the research window is excluded from the frozen V0 universe unless a later decision adds deterministic rights adjustment support.
 
-UDiFF row-level ISIN changes are an independent validation signal. If a symbol's ISIN changes from the prior session and there is no same-date corporate-action record of any type, the loader must halt or quarantine the symbol/date as a possible missing corporate action.
+UDiFF row-level ISIN changes are an independent validation signal. If a symbol's ISIN changes from the prior session and there is no same-date split, bonus, unsupported action, or identifier-changing ignored action such as a name change, the loader must halt or quarantine the symbol/date as a possible missing corporate action. Dividends, AGMs, EGMs, and board meetings do not explain an ISIN change.
 
 ## Ambiguous Or Combined Events
 
