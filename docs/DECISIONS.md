@@ -234,3 +234,19 @@ Each entry should record:
 
 **Affected experiments:** All backtests and reports using DP charges  
 **Rerun required:** No, decision made before first strategy run
+
+---
+
+## D-016 — Corporate-action adjustment precision and combined events
+
+**Date:** 19 August 2026  
+**Status:** Accepted
+
+**Old rule:** Corporate-action split and bonus support did not specify adjusted-price precision, adjusted-volume precision, or how to handle a single NSE purpose string containing both a split and a bonus.
+
+**New rule:** Corporate-action factors are `Decimal` values quantized to 10 decimal places using `ROUND_HALF_UP`. Adjusted OHLC prices are quantized to `Decimal("0.000001")` rupees after applying cumulative factors. Adjusted volume is adjusted alongside price and quantized to six decimal places. A combined split-plus-bonus purpose string is unsupported in V1 and must be quarantined until the parser can represent multiple actions on one ex-date.
+
+**Reason:** Bonus ratios such as 1:2 create repeating decimal price factors, and leaving their precision implicit would leak context-dependent Decimal values into later accounting. Combined split-plus-bonus strings cannot be represented safely by the current one-record/one-action parser and must not silently drop either action.
+
+**Affected experiments:** Corporate-action adjustment, data loader, universe construction, and all downstream backtests  
+**Rerun required:** No, decision made before first corporate-action validation run
