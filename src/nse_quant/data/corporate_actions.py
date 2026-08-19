@@ -9,13 +9,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from enum import Enum
 import re
 from typing import Iterable
 
 
 ONE = Decimal("1")
+ADJUSTMENT_FACTOR = Decimal("0.0000000001")
 
 
 class CorporateActionType(str, Enum):
@@ -70,9 +71,17 @@ def parse_corporate_action(record: CorporateActionRecord) -> ParsedCorporateActi
     """Parse one NSE corporate-action record into deterministic adjustment factors."""
 
     purpose = _normalise_text(record.purpose)
+    has_bonus = "bonus" in purpose
+    has_split = _has_split_token(purpose)
 
-    if "bonus" in purpose:
-        ratio = _parse_ratio(purpose)
+    if has_bonus and has_split:
+        return _unsupported(
+            record,
+            "Combined split and bonus action requires multi-event support; quarantine for manual review.",
+        )
+
+    if has_bonus:
+        ratio = _parse_bonus_ratio(purpose)
         if ratio is not None:
             new_shares, old_shares = ratio
             share_factor = (old_shares + new_shares) / old_shares
@@ -82,14 +91,21 @@ def parse_corporate_action(record: CorporateActionRecord) -> ParsedCorporateActi
                 ex_date=record.ex_date,
                 record_date=record.record_date,
                 purpose=record.purpose,
-                price_adjustment_factor=old_shares / (old_shares + new_shares),
-                volume_adjustment_factor=share_factor,
+                price_adjustment_factor=_factor(
+                    old_shares / (old_shares + new_shares)
+                ),
+                volume_adjustment_factor=_factor(share_factor),
                 ratio_numerator=new_shares,
                 ratio_denominator=old_shares,
                 note="Bonus ratio interpreted as new shares per existing shares.",
             )
 
-    if "split" in purpose or "sub-division" in purpose or "sub division" in purpose:
+        return _unsupported(
+            record,
+            "Bonus action ratio could not be parsed safely; quarantine for manual review.",
+        )
+
+    if has_split:
         face_values = _parse_split_face_values(purpose)
         if face_values is not None:
             old_face_value, new_face_value = face_values
@@ -99,13 +115,25 @@ def parse_corporate_action(record: CorporateActionRecord) -> ParsedCorporateActi
                 ex_date=record.ex_date,
                 record_date=record.record_date,
                 purpose=record.purpose,
-                price_adjustment_factor=new_face_value / old_face_value,
-                volume_adjustment_factor=old_face_value / new_face_value,
+                price_adjustment_factor=_factor(new_face_value / old_face_value),
+                volume_adjustment_factor=_factor(old_face_value / new_face_value),
                 ratio_numerator=old_face_value,
                 ratio_denominator=new_face_value,
                 note="Split ratio interpreted from old and new face values.",
             )
 
+        return _unsupported(
+            record,
+            "Split action face-value change could not be parsed safely; quarantine for manual review.",
+        )
+
+    return _unsupported(
+        record,
+        "Unsupported corporate-action purpose; quarantine for manual review.",
+    )
+
+
+def _unsupported(record: CorporateActionRecord, note: str) -> ParsedCorporateAction:
     return ParsedCorporateAction(
         symbol=record.symbol,
         action_type=CorporateActionType.UNSUPPORTED,
@@ -114,7 +142,7 @@ def parse_corporate_action(record: CorporateActionRecord) -> ParsedCorporateActi
         purpose=record.purpose,
         price_adjustment_factor=ONE,
         volume_adjustment_factor=ONE,
-        note="Unsupported corporate-action purpose; quarantine for manual review.",
+        note=note,
     )
 
 
@@ -136,8 +164,8 @@ def factors_for_date(
             continue
         if bar_date >= action.ex_date:
             continue
-        price_factor *= action.price_adjustment_factor
-        volume_factor *= action.volume_adjustment_factor
+        price_factor = _factor(price_factor * action.price_adjustment_factor)
+        volume_factor = _factor(volume_factor * action.volume_adjustment_factor)
 
     return AdjustmentFactors(price=price_factor, volume=volume_factor)
 
@@ -146,9 +174,29 @@ def _normalise_text(value: str) -> str:
     return re.sub(r"\s+", " ", value.strip().lower())
 
 
-def _parse_ratio(value: str) -> tuple[Decimal, Decimal] | None:
-    match = re.search(r"(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)", value)
-    if match is None:
+def _factor(amount: Decimal) -> Decimal:
+    return amount.quantize(ADJUSTMENT_FACTOR, rounding=ROUND_HALF_UP)
+
+
+def _has_split_token(value: str) -> bool:
+    return "split" in value or "sub-division" in value or "sub division" in value
+
+
+def _parse_bonus_ratio(value: str) -> tuple[Decimal, Decimal] | None:
+    matches = list(
+        re.finditer(
+            r"(?<![\d.])(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)(?![\d.])",
+            value,
+        )
+    )
+    if len(matches) != 1:
+        return None
+
+    match = matches[0]
+    context_start = max(0, match.start() - 40)
+    context_end = min(len(value), match.end() + 40)
+    context = value[context_start:context_end]
+    if "bonus" not in context and "ratio" not in context:
         return None
 
     numerator = Decimal(match.group(1))
