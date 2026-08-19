@@ -221,7 +221,7 @@ Each entry should record:
 
 ---
 
-## D-015 — DP charges use aggregate pre-GST base
+## D-015 — DP charges use provisional aggregate pre-GST base
 
 **Date:** 19 August 2026  
 **Status:** Accepted
@@ -230,7 +230,39 @@ Each entry should record:
 
 **New rule:** The Zerodha reference profile stores pre-GST DP bases: ₹13.00 for a male primary holder and ₹12.75 for a female primary holder. For each trading day, aggregate the applicable pre-GST DP base across distinct sold symbols, apply GST once to that aggregate, and round the final DP charge to paise. DP GST remains inside `dp_charges` and is not included in the normal brokerage/exchange/SEBI GST component.
 
-**Reason:** The female-primary profile does not scale correctly when multiplying the individually rounded GST-inclusive amount. Two female-primary sold symbols should be calculated as ₹25.50 + 18% GST = ₹30.09, not ₹15.05 × 2 = ₹30.10.
+**Reason:** The per-symbol GST-inclusive ordering and aggregate-then-GST ordering differ by paise for the female-primary profile. The project chooses the aggregate-then-GST interpretation for now because it keeps the pre-GST DP base explicit, but this remains provisional pending reconciliation against a real Zerodha delivery funds statement or contract note. The observed discrepancy is one to three paise and is below the ₹1 daily cost-engine acceptance tolerance.
 
 **Affected experiments:** All backtests and reports using DP charges  
 **Rerun required:** No, decision made before first strategy run
+
+---
+
+## D-016 — Corporate-action adjustment precision and combined events
+
+**Date:** 19 August 2026  
+**Status:** Accepted
+
+**Old rule:** Corporate-action split and bonus support did not specify adjusted-price precision, adjusted-volume precision, or how to handle a single NSE purpose string containing both a split and a bonus.
+
+**New rule:** Corporate-action factors are `Decimal` values quantized to 10 decimal places using `ROUND_HALF_UP`. Adjusted OHLC prices are quantized to `Decimal("0.000001")` rupees after applying cumulative factors. Adjusted volume is adjusted alongside price and quantized to six decimal places. A combined split-plus-bonus purpose string is unsupported in V1 and must be quarantined until the parser can represent multiple actions on one ex-date.
+
+**Reason:** Bonus ratios such as 1:2 create repeating decimal price factors, and leaving their precision implicit would leak context-dependent Decimal values into later accounting. Combined split-plus-bonus strings cannot be represented safely by the current one-record/one-action parser and must not silently drop either action.
+
+**Affected experiments:** Corporate-action adjustment, data loader, universe construction, and all downstream backtests  
+**Rerun required:** No, decision made before first corporate-action validation run
+
+---
+
+## D-017 — Ignored corporate actions and validation gate
+
+**Date:** 19 August 2026  
+**Status:** Accepted
+
+**Old rule:** Unsupported corporate actions covered both recognised no-op records such as dividends and genuinely unsafe or ambiguous corporate-action text. `factors_for_date()` raised when it encountered any unsupported action for the symbol.
+
+**New rule:** Known no-price-adjustment events parse as `IGNORED` with neutral price and volume factors. This includes dividends, AGMs, EGMs, board meetings, and name changes. Genuinely unrecognised, ambiguous, or price-continuity-affecting events remain `UNSUPPORTED`. Dataset construction must call `validate_actions()` once for the frozen symbol set and date range, and must halt or quarantine if unsupported matching actions are present. `factors_for_date()` is a pure factor lookup that assumes validated input.
+
+**Reason:** Dividends are common in large-cap Indian equities and should not block price-series adjustment when V0 explicitly does not dividend-adjust. At the same time, silently ignoring unknown events would risk corrupting historical prices. Splitting ignored from unsupported actions keeps the parser conservative without making real NSE corporate-action files unusable.
+
+**Affected experiments:** Corporate-action adjustment, data loader, universe construction, and all downstream backtests  
+**Rerun required:** No, decision made before first corporate-action validation run
