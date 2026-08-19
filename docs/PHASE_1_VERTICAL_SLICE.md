@@ -5,7 +5,7 @@
 **Objective:** Produce one fully reconciled end-to-end research/backtest path  
 **Starting capital:** ₹50,000 simulated  
 **Market:** NSE cash equity delivery  
-**Status:** Ready to implement after Phase 0 freeze  
+**Status:** IN PROGRESS  
 **Last updated:** 19 August 2026
 
 ---
@@ -246,8 +246,8 @@ NSE transaction charge:        0.00307%
 SEBI turnover charge:          ₹10 per crore
 GST:                           18% on brokerage + exchange + SEBI charges
 Stamp duty:                    0.015% on buy side
-DP male-primary profile:       ₹15.34 per sold stock/day
-DP female-primary profile:     ₹15.05 per sold stock/day
+DP male-primary pre-GST base:   ₹13.00 per sold stock/day
+DP female-primary pre-GST base: ₹12.75 per sold stock/day
 ```
 
 These are implementation reference values, not permanent assumptions.
@@ -281,7 +281,7 @@ brokerage + exchange transaction charges + SEBI charges
 
 Do **not** include stamp duty or DP charges in the GST base.
 
-The configured DP values (for example ₹15.34 for the current male-primary reference profile) are already GST-inclusive. Never apply GST to those values again.
+DP charges are calculated from the aggregate pre-GST DP base for distinct sold symbols, then GST is applied once to that aggregate. DP GST remains inside the DP charge total and is not included in the normal trading-charge GST component.
 
 ### 4.6 Slippage
 
@@ -368,10 +368,11 @@ two DP charges
 
 ### 5.5 Female-primary DP profile
 
-The female-primary DP profile should use the dated reference value:
+The female-primary DP profile should use the dated pre-GST base and apply GST after daily sold-symbol aggregation:
 
 ```text
-₹15.05 per sold stock/day
+one sold stock:  ₹12.75 × 1.18 = ₹15.05
+two sold stocks: ₹25.50 × 1.18 = ₹30.09
 ```
 
 ### 5.6 Buy-only DP test

@@ -2,7 +2,7 @@
 
 **Project:** NSE Quant Research and Trading System  
 **Phase:** 0  
-**Status:** Working specification — freeze before Phase 1 implementation  
+**Status:** FROZEN  
 **Primary market:** NSE cash equity, delivery segment  
 **Research style:** Long/cash, swing/position trading  
 **Starting simulated capital:** ₹50,000  
@@ -406,7 +406,7 @@ NSE publishes corporate actions separately, including symbol, purpose, ex-date, 
 Target module:
 
 ```text
-src/data/corporate_actions.py
+src/nse_quant/data/corporate_actions.py
 ```
 
 Responsibilities:
@@ -566,8 +566,8 @@ For implementation testing only, the current Zerodha resident-individual NSE equ
 - SEBI charge: ₹10 per crore;
 - GST: 18% on brokerage + SEBI charges + transaction charges;
 - stamp duty on equity delivery: **0.015% on the buy side** under the currently published Zerodha schedule;
-- DP charge for a male primary holder: ₹13 + 18% GST = ₹15.34 per sold stock per day;
-- DP charge for a female primary holder: ₹12.75 + 18% GST = ₹15.05 per sold stock per day.
+- DP pre-GST base for a male primary holder: ₹13 per sold stock per day;
+- DP pre-GST base for a female primary holder: ₹12.75 per sold stock per day.
 
 These values are **dated reference assumptions**, not permanent constants.
 
@@ -640,7 +640,7 @@ Do not use allocated fill-level charges to override the daily authoritative acco
 For the reference Zerodha model:
 
 - selling one stock multiple times on the same day produces one DP charge for that stock under a normal single-settlement case;
-- selling multiple distinct stocks on the same day produces one DP charge per sold stock;
+- selling multiple distinct stocks on the same day aggregates the pre-GST DP base across all distinct sold stocks, then applies GST once to that aggregate;
 - DP charges are not treated as a per-fill percentage;
 - exceptional separate-settlement cases must be modelled explicitly if they become relevant.
 
@@ -654,7 +654,7 @@ brokerage + SEBI charges + exchange transaction charges
 
 The GST base must **exclude stamp duty and DP charges**.
 
-The quoted DP reference values are already GST-inclusive and must not receive GST a second time.
+DP GST is included inside the DP charge total after aggregating the pre-GST DP base. It must not be included in the normal trading-charge GST component and must not be taxed a second time.
 
 ### 11.8 Slippage direction
 

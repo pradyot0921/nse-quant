@@ -12,7 +12,9 @@ totals.
 GST is calculated from paise-rounded brokerage, exchange transaction charges,
 and SEBI charges pending real contract-note validation. This may differ from a
 broker that computes GST from unrounded intermediates, and is covered by the
-daily real-record tolerance rule.
+daily real-record tolerance rule. DP charges are calculated from the aggregate
+pre-GST DP base for distinct sold symbols; DP GST remains inside dp_charges and
+is not included in the normal trading-charge GST component.
 """
 
 from __future__ import annotations
@@ -48,15 +50,15 @@ class CostProfile:
     sebi_turnover_rate: Decimal
     gst_rate: Decimal
     stamp_duty_buy_rate: Decimal
-    dp_male_primary: Decimal
-    dp_female_primary: Decimal
+    dp_male_primary_base: Decimal
+    dp_female_primary_base: Decimal
     checked_on: date
 
-    def dp_charge_for(self, dp_profile: DPChargeProfile | str) -> Decimal:
+    def dp_base_for(self, dp_profile: DPChargeProfile | str) -> Decimal:
         profile = DPChargeProfile(dp_profile)
         if profile is DPChargeProfile.MALE_PRIMARY:
-            return self.dp_male_primary
-        return self.dp_female_primary
+            return self.dp_male_primary_base
+        return self.dp_female_primary_base
 
 
 ZERODHA_NSE_DELIVERY_2026_08 = CostProfile(
@@ -68,8 +70,8 @@ ZERODHA_NSE_DELIVERY_2026_08 = CostProfile(
     sebi_turnover_rate=Decimal("0.000001"),
     gst_rate=Decimal("0.18"),
     stamp_duty_buy_rate=Decimal("0.00015"),
-    dp_male_primary=Decimal("15.34"),
-    dp_female_primary=Decimal("15.05"),
+    dp_male_primary_base=Decimal("13.00"),
+    dp_female_primary_base=Decimal("12.75"),
     checked_on=date(2026, 8, 19),
 )
 
@@ -207,7 +209,9 @@ def calculate_daily_costs(
         fill.symbol for fill in daily_fills if fill.side is TradeSide.SELL
     }
     dp_charges = money(
-        Decimal(len(sold_symbols)) * profile.dp_charge_for(dp_profile)
+        Decimal(len(sold_symbols))
+        * profile.dp_base_for(dp_profile)
+        * (Decimal("1") + profile.gst_rate)
     )
 
     components = CostComponents(
