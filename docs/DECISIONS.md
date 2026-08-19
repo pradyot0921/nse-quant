@@ -362,3 +362,21 @@ UNSUPPORTED=82
 
 **Affected experiments:** UDiFF loader, data validation, universe construction, and all downstream Phase 1 backtests
 **Rerun required:** No market-data pipeline or universe has been frozen yet.
+
+---
+
+## D-023 — Version-controlled NSE trading-session calendar source
+
+**Date:** 20 August 2026
+**Status:** Accepted
+
+**Old rule:** D-022 required a version-controlled expected trading-session calendar but did not define the calendar source, extension process, or treatment of special sessions.
+
+**New rule:** The V0 expected-session calendar is a checked-in artifact generated from NSE's published Capital Market trading-holiday list for each calendar year, weekends, and explicitly recorded special-session exceptions such as Muhurat trading. The checked-in session file is the loader's source of truth at runtime. NSE holiday pages, attachments, and circulars are provenance inputs, not runtime dependencies.
+
+If a UDiFF file exists on a date absent from the checked-in calendar, the loader must report a calendar mismatch and halt or quarantine until the date is either documented as a special session or rejected as out of scope. If an expected session has no raw UDiFF file, the loader treats that as a data failure. New years are added by committing the holiday source, generated session list, and any known special sessions before that year enters a research run.
+
+**Reason:** Deriving the expected calendar from observed UDiFF file existence is circular because file presence is exactly what the loader must validate. NSE can also open special sessions outside the ordinary weekday-minus-holidays pattern, so those exceptions need explicit provenance rather than ad hoc runtime loosening.
+
+**Affected experiments:** UDiFF loader, data validation, universe construction, and all downstream Phase 1 backtests
+**Rerun required:** No market-data pipeline or universe has been frozen yet.
