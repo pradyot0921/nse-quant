@@ -221,7 +221,7 @@ Each entry should record:
 
 ---
 
-## D-015 — DP charges use aggregate pre-GST base
+## D-015 — DP charges use provisional aggregate pre-GST base
 
 **Date:** 19 August 2026  
 **Status:** Accepted
@@ -230,7 +230,7 @@ Each entry should record:
 
 **New rule:** The Zerodha reference profile stores pre-GST DP bases: ₹13.00 for a male primary holder and ₹12.75 for a female primary holder. For each trading day, aggregate the applicable pre-GST DP base across distinct sold symbols, apply GST once to that aggregate, and round the final DP charge to paise. DP GST remains inside `dp_charges` and is not included in the normal brokerage/exchange/SEBI GST component.
 
-**Reason:** The female-primary profile does not scale correctly when multiplying the individually rounded GST-inclusive amount. Two female-primary sold symbols should be calculated as ₹25.50 + 18% GST = ₹30.09, not ₹15.05 × 2 = ₹30.10.
+**Reason:** The per-symbol GST-inclusive ordering and aggregate-then-GST ordering differ by paise for the female-primary profile. The project chooses the aggregate-then-GST interpretation for now because it keeps the pre-GST DP base explicit, but this remains provisional pending reconciliation against a real Zerodha delivery funds statement or contract note. The observed discrepancy is one to three paise and is below the ₹1 daily cost-engine acceptance tolerance.
 
 **Affected experiments:** All backtests and reports using DP charges  
 **Rerun required:** No, decision made before first strategy run
