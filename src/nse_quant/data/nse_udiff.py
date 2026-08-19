@@ -55,6 +55,7 @@ EXPECTED_COLUMNS = (
 )
 
 DEFAULT_SERIES = "EQ"
+VWAP_PRICE_TOLERANCE = Decimal("0.005")
 
 
 class UDiffParseError(ValueError):
@@ -91,9 +92,18 @@ class UDiffEquityBar:
 
 
 @dataclass(frozen=True)
+class UDiffRejectedRow:
+    row_number: int
+    symbol: str
+    series: str
+    reason: str
+
+
+@dataclass(frozen=True)
 class UDiffBhavcopy:
     trade_date: date
     bars: tuple[UDiffEquityBar, ...]
+    rejected_rows: tuple[UDiffRejectedRow, ...]
     rejected_series_counts: dict[str, int]
     session_ids: tuple[str, ...]
     source_name: str
@@ -142,22 +152,36 @@ def parse_cm_udiff_file(path: str | Path, *, series: str = DEFAULT_SERIES) -> UD
     session_ids = tuple(sorted({row["SsnId"].strip().upper() for row in rows}))
 
     bars = []
+    rejected_rows = []
     seen_symbols: set[str] = set()
     for row_number, row in enumerate(rows, start=2):
         if row["SctySrs"].strip().upper() != target_series:
             continue
 
-        bar = _parse_eq_row(row, source_name=source.name, row_number=row_number)
-        if bar.symbol in seen_symbols:
-            raise UDiffDataQualityError(
-                f"{source.name}:{row_number}: duplicate {target_series} symbol {bar.symbol}"
+        try:
+            bar = _parse_eq_row(row, source_name=source.name, row_number=row_number)
+            if bar.symbol in seen_symbols:
+                raise UDiffDataQualityError(
+                    f"duplicate {target_series} symbol {bar.symbol}"
+                )
+        except UDiffDataQualityError as exc:
+            rejected_rows.append(
+                UDiffRejectedRow(
+                    row_number=row_number,
+                    symbol=row.get("TckrSymb", "").strip().upper(),
+                    series=row.get("SctySrs", "").strip().upper(),
+                    reason=str(exc),
+                )
             )
+            continue
+
         seen_symbols.add(bar.symbol)
         bars.append(bar)
 
     return UDiffBhavcopy(
         trade_date=trade_date,
         bars=tuple(bars),
+        rejected_rows=tuple(rejected_rows),
         rejected_series_counts=dict(sorted(rejected_series_counts.items())),
         session_ids=session_ids,
         source_name=source.name,
@@ -236,7 +260,11 @@ def _parse_eq_row(
         raise UDiffDataQualityError(f"{prefix}: LastPric outside low/high range")
 
     implied_vwap = traded_value / Decimal(volume)
-    if not (low_price <= implied_vwap <= high_price):
+    if not (
+        low_price - VWAP_PRICE_TOLERANCE
+        <= implied_vwap
+        <= high_price + VWAP_PRICE_TOLERANCE
+    ):
         raise UDiffDataQualityError(
             f"{prefix}: TtlTrfVal/TtlTradgVol {implied_vwap} outside low/high range"
         )
