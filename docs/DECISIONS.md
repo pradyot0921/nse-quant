@@ -271,7 +271,7 @@ Each entry should record:
 
 ## D-018 — Real NSE corpus-derived corporate-action parser rules
 
-**Date:** 19 August 2026  
+**Date:** 19 August 2026
 **Status:** Accepted
 
 **Old rule:** Split parsing supported synthetic face-value wording but did not support the actual NSE `Face Value Split (Sub-Division)` wording containing `Per Share`. Scheme-of-arrangement bonus-like records and several non-equity bonus instruments were not explicitly classified.
@@ -280,12 +280,51 @@ Each entry should record:
 
 **Evidence:** One-year NSE EQ corporate-action corpus scan after correction:
 
-SPLIT=52  
-BONUS=49  
-IGNORED=1683  
+SPLIT=52
+BONUS=49
+IGNORED=1683
 UNSUPPORTED=82
 
 **Reason:** Real-data validation exposed 52 safe false-negative split records and one unsafe false-positive NCRPS adjustment before adjusted OHLCV data was constructed. The TVSMOTOR `Scheme Of Arrangement - Bonus Ncrps 4:1` record would have applied a 0.2 price factor to a liquid stock, fabricating a 400% single-day return that a momentum ranker could treat as the strongest signal in the universe. The parser's unit tests passed throughout because they encoded the same invented wording as the code. The rules were updated from observed NSE production wording rather than invented examples.
 
-**Affected experiments:** Corporate-action adjustment, data loader, universe construction, and all downstream backtests  
+**Affected experiments:** Corporate-action adjustment, data loader, universe construction, and all downstream backtests
 **Rerun required:** No completed strategy runs exist; rerun the corporate-action corpus scan before universe freeze
+
+---
+
+## D-019 — Corporate-action convention validation and V0 exclusion rules
+
+**Date:** 19 August 2026
+**Status:** Accepted
+
+**Old rule:** Bonus ratio convention was inferred from market convention but not validated against raw NSE price data. Buybacks were classified as `UNSUPPORTED`. V0 did not explicitly state how rights issues affect universe selection. The data-validation layer did not define an independent check for corporate-action records missing from the NSE corporate-action file.
+
+**New rule:** NSE bonus ratios are interpreted as new shares per existing shares: `Bonus X:Y` means X new shares for Y held shares. Buyback records labelled `Buy Back` are `IGNORED` for price and volume adjustment because neither tender-offer buybacks nor open-market buybacks multiply or dilute the holdings of non-participating shareholders. V0 excludes any symbol with a rights issue inside the research window from the frozen universe unless a later decision adds deterministic rights adjustment support. During OHLCV validation, an ISIN change from the prior session with no same-date split, bonus, unsupported action, or identifier-changing ignored action such as a name change must halt or quarantine the symbol/date as a possible missing corporate action. Dividends, AGMs, EGMs, and board meetings do not explain an ISIN change.
+
+**Evidence:** Official NSE CM-UDiFF bhavcopy checks:
+
+- PATANJALI `Bonus 2:1`, ex-date 11 September 2025: prior close 1802.00, ex-date open 602.70. Correct convention predicts 600.67, a 0.34% difference; inverted convention predicts 901.00, a 33.11% difference.
+- BEML face-value split 10 to 5, ex-date 3 November 2025: prior close 4399.80, ex-date open 2188.00. The 0.5 split factor predicts 2199.90, a 0.54% difference.
+- INFY `Buy Back`, ex-date 14 November 2025: ten sessions either side showed ordinary market movement rather than a mechanical adjustment step. This corroborates, but does not replace, the structural no-entitlement-change reason for ignoring buybacks.
+- The seven real split examples from the 19-Aug-2025 to 19-Aug-2026 corpus all changed ISIN on the split ex-date in official NSE CM-UDiFF bhavcopy data.
+
+**Reason:** The split and bonus price checks remove the final parser convention ambiguity using raw exchange bhavcopy data rather than unit-test assumptions. Buybacks do not create a share-count entitlement multiplier for shareholders who do not participate, so applying any automatic price/volume factor would be wrong. Rights issues do affect ex-date price continuity but are not supported in V0, so excluding affected symbols before the universe freeze prevents deadline pressure from weakening the quarantine gate. ISIN changes provide a cheap independent signal that can catch missing corporate-action records before adjusted OHLCV is trusted, but no-op records that cannot change identifiers must not mask missing split or bonus records.
+
+**Affected experiments:** Corporate-action adjustment, data loader, universe construction, and all downstream backtests
+**Rerun required:** No completed strategy runs exist; rerun the corporate-action corpus scan and price-continuity checks before universe freeze
+
+---
+
+## D-020 — Universe liquidity ranking uses raw traded value
+
+**Date:** 19 August 2026
+**Status:** Accepted
+
+**Old rule:** V0 universe selection required high median daily traded value but did not specify whether traded value is computed from raw or adjusted OHLCV fields when an explicit turnover field is unavailable.
+
+**New rule:** Universe selection ranks liquidity using the exchange-provided raw traded value or, if unavailable, raw close multiplied by raw volume. Do not compute median daily traded value from adjusted price multiplied by adjusted volume.
+
+**Reason:** Traded value is economically invariant: the rupees exchanged on a historical session are the raw price-volume product for that session. Adjusted price multiplied by adjusted volume should be close but can drift because both adjusted fields are quantized, adding needless imprecision to universe ranking.
+
+**Affected experiments:** Universe construction, data validation, and all downstream Phase 1 backtests
+**Rerun required:** No universe has been frozen yet.

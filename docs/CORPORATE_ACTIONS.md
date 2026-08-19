@@ -1,7 +1,7 @@
 # Corporate-Action Adjustment Notes
 
 **Status:** Phase 1 implementation note  
-**Decision anchor:** D-016 and D-017 in `docs/DECISIONS.md`
+**Decision anchor:** D-016, D-017, D-018, D-019, and D-020 in `docs/DECISIONS.md`
 
 ## V1 Supported Actions
 
@@ -20,9 +20,12 @@ Some recognised corporate-action records do not require an OHLCV adjustment for 
 - dividends;
 - AGMs / EGMs;
 - board meetings;
-- name changes.
+- name changes;
+- buybacks.
 
 These records keep price and volume factors at 1. They must be explicit known no-ops, not a catch-all for text the parser does not understand.
+
+`Buy Back` records are ignored for price and volume adjustment because tender-offer and open-market buybacks do not multiply or dilute the holdings of non-participating shareholders.
 
 ## Unsupported Actions
 
@@ -37,6 +40,10 @@ even when it also contains split or bonus language. A scheme is a corporate
 reorganisation and is not safe to reduce to one mechanical split or equity-bonus
 factor.
 
+Rights issues remain unsupported in V0. A symbol with a rights issue inside the research window is excluded from the frozen V0 universe unless a later decision adds deterministic rights adjustment support.
+
+UDiFF row-level ISIN changes are an independent validation signal. If a symbol's ISIN changes from the prior session and there is no same-date split, bonus, unsupported action, or identifier-changing ignored action such as a name change, the loader must halt or quarantine the symbol/date as a possible missing corporate action. Dividends, AGMs, EGMs, and board meetings do not explain an ISIN change.
+
 ## Ambiguous Or Combined Events
 
 A single NSE purpose string that contains both a split and a bonus is unsupported in V1.
@@ -49,6 +56,8 @@ Bonus ratios use a colon separator. Slash-separated tokens are not accepted as b
 
 If more than one colon-shaped ratio token appears in the purpose text, the record is unsupported. The parser must not pick the first ratio and continue.
 
+Bonus ratios are interpreted as new shares per existing shares. Official NSE CM-UDiFF checks confirmed this convention on PATANJALI `Bonus 2:1` on 11 September 2025.
+
 Bonus issues of non-equity instruments are unsupported. This includes
 debentures, preference shares, NCRPS, NCDs, CRPS, OCRPS, and warrants.
 
@@ -59,6 +68,8 @@ Corporate-action factors are `Decimal` values quantized to 10 decimal places usi
 Adjusted OHLC prices are quantized to `Decimal("0.000001")` rupees after applying cumulative factors. Adjusted volume is adjusted alongside price and quantized to six decimal places.
 
 Final accounting and NAV values still use the separate money precision documented for portfolio accounting.
+
+Universe liquidity ranking must use raw traded value, or raw close multiplied by raw volume when the exchange traded-value field is unavailable. It must not use adjusted price multiplied by adjusted volume.
 
 ## Required Messy Tests
 
@@ -74,6 +85,7 @@ The parser test set must include:
 - a scheme-of-arrangement string containing bonus text;
 - non-equity bonus instruments;
 - ignored dividends / meetings / name changes;
+- ignored buybacks;
 - a consolidation;
 - a rights issue;
 - malformed split and bonus strings;

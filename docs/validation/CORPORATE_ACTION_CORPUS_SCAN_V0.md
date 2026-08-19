@@ -13,8 +13,8 @@ This scan validates the conservative corporate-action parser against one year of
 |---|---:|
 | SPLIT | 52 |
 | BONUS | 49 |
-| IGNORED | 1683 |
-| UNSUPPORTED | 82 |
+| IGNORED | 1713 |
+| UNSUPPORTED | 52 |
 
 ## Unsupported Purposes
 
@@ -22,7 +22,6 @@ These records intentionally remain quarantined in V0. A universe symbol with one
 
 | Count | Purpose |
 |---:|---|
-| 30 | Buy Back |
 | 12 | Demerger |
 | 1 | Rights 12:47 @ Premium Rs 5/- |
 | 1 | Scheme Of Arrangement - Bonus Ncrps 4:1 |
@@ -90,8 +89,9 @@ These records intentionally remain quarantined in V0. A universe symbol with one
 | SPLIT | 3 | Face Value Split (Sub-Division) - From Rs 5/- Per Share To Re 1/- Per Share | 0.2000000000 | 5.0000000000 | STEELCAS 2025-08-29 |
 | SPLIT | 2 | Face Value Split (Sub-Division) - From Rs 5/- Per Share To Rs 2/- Per Share | 0.4000000000 | 2.5000000000 | DEVIT 2025-08-21 |
 
-## Follow-Up Checks
+## Resolved Follow-Up Checks
 
-- Verify the bonus ratio convention against actual price data before applying adjusted series to universe selection.
-- Verify whether tender-offer buybacks should be reclassified from `UNSUPPORTED` to `IGNORED`.
-- Document a V0 universe policy for symbols with rights issues in the research window.
+- Bonus ratio convention was verified against official NSE CM-UDiFF bhavcopy data. PATANJALI `Bonus 2:1` on 11 September 2025 opened 0.34% from the expected one-third adjusted prior close and 33.11% from the inverted half-factor convention. BEML's 10-to-5 split on 3 November 2025 opened 0.54% from the expected half-factor adjusted prior close.
+- `Buy Back` is reclassified as `IGNORED` for price and volume adjustment. Structurally, tender-offer and open-market buybacks do not multiply or dilute the holdings of non-participating shareholders. INFY's 14 November 2025 buyback window corroborated this with no mechanical price step.
+- Rights issues remain unsupported in V0. Symbols with a rights issue in the research window are excluded from the frozen V0 universe unless a later decision adds deterministic rights adjustment support.
+- UDiFF row-level ISIN changes are an independent validation signal. The seven real split examples in this corpus all changed ISIN on the split ex-date in official NSE CM-UDiFF bhavcopy data. An ISIN change without a same-date split, bonus, unsupported action, or identifier-changing ignored action such as a name change must halt or quarantine the symbol/date as a possible missing corporate action. Dividends, AGMs, EGMs, and board meetings do not explain an ISIN change.

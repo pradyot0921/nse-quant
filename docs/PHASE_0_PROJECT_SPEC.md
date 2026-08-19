@@ -196,7 +196,7 @@ For backtest and research promotion:
 - maximum drawdown is measured on daily strategy NAV;
 - benchmark maximum drawdown is measured over the **identical evaluation period** using the aligned Nifty 100 TRI series;
 - a candidate fails the minimum drawdown gate if its maximum drawdown is **worse than the benchmark's maximum drawdown over the same period**;
-- a candidate with a lower maximum drawdown than the benchmark passes the minimum drawdown gate, but promotion still depends on return, risk-adjusted performance, turnover, costs, and validation;
+- a candidate with a lower maximum drawdown than the benchmark passes the minimum drawdown gate, while overall promotion still depends on return, risk-adjusted performance, turnover, and validation;
 - drawdown improvement must be reported in percentage points and relative to benchmark drawdown;
 - no extra arbitrary absolute research drawdown threshold is imposed in V0/V1;
 - research drawdown is an evaluation gate, not an in-engine trade blocker.
@@ -302,6 +302,8 @@ The V0 list should be selected mechanically from eligible large-cap names using 
 - sufficiently continuous trading history back toward the chosen research start date;
 - high median daily traded value;
 - no severe unresolved data-quality issue.
+
+Median daily traded value must be computed from the exchange-provided raw traded value field, or from raw close multiplied by raw volume if no reliable traded-value field is available. Do not rank liquidity from adjusted price multiplied by adjusted volume.
 
 The exact thresholds must be written before the resulting list is generated.
 
