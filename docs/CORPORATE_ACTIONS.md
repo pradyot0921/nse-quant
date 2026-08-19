@@ -1,7 +1,7 @@
 # Corporate-Action Adjustment Notes
 
 **Status:** Phase 1 implementation note  
-**Decision anchor:** D-016 in `docs/DECISIONS.md`
+**Decision anchor:** D-016 and D-017 in `docs/DECISIONS.md`
 
 ## V1 Supported Actions
 
@@ -10,15 +10,30 @@ The first corporate-action parser supports only deterministic single-event actio
 - stock splits where the purpose text contains an old face value and a new face value;
 - bonus issues where the purpose text contains exactly one colon-separated ratio.
 
-All other events are unsupported in V1 and must be quarantined for manual review before downstream data is trusted.
+## Ignored No-Op Actions
+
+Some recognised corporate-action records do not require an OHLCV adjustment for V1. These parse as `IGNORED`, not `UNSUPPORTED`:
+
+- dividends;
+- AGMs / EGMs;
+- board meetings;
+- name changes.
+
+These records keep price and volume factors at 1. They must be explicit known no-ops, not a catch-all for text the parser does not understand.
+
+## Unsupported Actions
+
+Unknown, ambiguous, or price-continuity-affecting events that V1 does not support parse as `UNSUPPORTED` and must be quarantined for manual review before downstream data is trusted.
+
+Unsupported or ambiguous events affecting a frozen-universe symbol during the research window must halt or quarantine dataset construction. Logging and continuing with an unadjusted series is not acceptable.
+
+The ingestion/data-build layer must call `validate_actions()` once for the target symbols and research date range before factor lookup or adjusted data construction. `factors_for_date()` is a pure lookup that assumes the input has already passed validation.
 
 ## Ambiguous Or Combined Events
 
 A single NSE purpose string that contains both a split and a bonus is unsupported in V1.
 
 The current parser returns one `ParsedCorporateAction`, so it cannot safely represent two actions on the same ex-date. Until the model supports multiple parsed events from one source record, combined split-plus-bonus text must quarantine instead of silently dropping one action.
-
-Unsupported or ambiguous events affecting a frozen-universe symbol during the research window must halt or quarantine dataset construction. Logging and continuing with an unadjusted series is not acceptable.
 
 ## Bonus Ratio Parsing
 
@@ -44,9 +59,12 @@ The parser test set must include:
 - a slash-separated non-ratio token;
 - multiple ratio-shaped tokens;
 - a combined split-plus-bonus string;
+- non-equity bonus instruments;
+- ignored dividends / meetings / name changes;
 - a consolidation;
 - a rights issue;
-- malformed split and bonus strings.
+- malformed split and bonus strings;
+- validation refusing unsupported matching actions while allowing ignored no-ops.
 
 ## Real NSE Corpus Check
 
