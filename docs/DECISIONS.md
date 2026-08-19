@@ -266,3 +266,26 @@ Each entry should record:
 
 **Affected experiments:** Corporate-action adjustment, data loader, universe construction, and all downstream backtests  
 **Rerun required:** No, decision made before first corporate-action validation run
+
+---
+
+## D-018 — Real NSE corpus-derived corporate-action parser rules
+
+**Date:** 19 August 2026  
+**Status:** Accepted
+
+**Old rule:** Split parsing supported synthetic face-value wording but did not support the actual NSE `Face Value Split (Sub-Division)` wording containing `Per Share`. Scheme-of-arrangement bonus-like records and several non-equity bonus instruments were not explicitly classified.
+
+**New rule:** V1 explicitly supports the seven observed NSE EQ-series face-value split formats identified in the 19-Aug-2025 to 19-Aug-2026 corpus. Any `Scheme Of Arrangement` record is `UNSUPPORTED` in V1. Bonus NCRPS, NCD, CRPS, OCRPS, debentures, preference shares, warrants, and other non-equity bonus instruments are `UNSUPPORTED`.
+
+**Evidence:** One-year NSE EQ corporate-action corpus scan after correction:
+
+SPLIT=52  
+BONUS=49  
+IGNORED=1683  
+UNSUPPORTED=82
+
+**Reason:** Real-data validation exposed 52 safe false-negative split records and one unsafe false-positive NCRPS adjustment before adjusted OHLCV data was constructed. The TVSMOTOR `Scheme Of Arrangement - Bonus Ncrps 4:1` record would have applied a 0.2 price factor to a liquid stock, fabricating a 400% single-day return that a momentum ranker could treat as the strongest signal in the universe. The parser's unit tests passed throughout because they encoded the same invented wording as the code. The rules were updated from observed NSE production wording rather than invented examples.
+
+**Affected experiments:** Corporate-action adjustment, data loader, universe construction, and all downstream backtests  
+**Rerun required:** No completed strategy runs exist; rerun the corporate-action corpus scan before universe freeze
