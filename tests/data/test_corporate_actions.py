@@ -9,6 +9,7 @@ from nse_quant.data.corporate_actions import (
     UnsupportedCorporateActionError,
     factors_for_date,
     parse_corporate_action,
+    validate_actions,
 )
 
 
@@ -121,12 +122,36 @@ def test_bonus_preference_issue_is_unsupported():
 
 
 def test_unsupported_action_is_quarantined_without_adjustment():
-    action = parse_corporate_action(record("Interim dividend Rs. 2 per share"))
+    action = parse_corporate_action(record("Unclear capital reconstruction event"))
 
     assert action.action_type == CorporateActionType.UNSUPPORTED
     assert action.price_adjustment_factor == Decimal("1")
     assert action.volume_adjustment_factor == Decimal("1")
     assert "quarantine" in action.note
+
+
+def test_dividend_is_ignored_not_unsupported():
+    action = parse_corporate_action(record("Interim dividend Rs. 8 per share"))
+
+    assert action.action_type == CorporateActionType.IGNORED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
+def test_known_noop_meeting_is_ignored():
+    action = parse_corporate_action(record("AGM and board meeting"))
+
+    assert action.action_type == CorporateActionType.IGNORED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
+def test_name_change_is_ignored_for_price_adjustment():
+    action = parse_corporate_action(record("Change in name of the company"))
+
+    assert action.action_type == CorporateActionType.IGNORED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
 
 
 def test_malformed_split_is_unsupported():
@@ -185,24 +210,59 @@ def test_factors_apply_only_before_ex_date_for_matching_symbol():
     assert on_ex_date.volume == Decimal("1")
 
 
-def test_factors_refuse_unsupported_matching_action():
+def test_factors_ignore_dividends_while_applying_split():
+    dividend_1 = parse_corporate_action(
+        record("Interim dividend Rs. 8 per share", ex_date=date(2020, 3, 1))
+    )
+    split = parse_corporate_action(
+        record("Split from Rs. 10/- to Rs. 5/-", ex_date=date(2021, 1, 1))
+    )
+    dividend_2 = parse_corporate_action(
+        record("Final dividend Rs. 12 per share", ex_date=date(2022, 3, 1))
+    )
+
+    before_split = factors_for_date(
+        "ABC", date(2019, 1, 1), [dividend_1, split, dividend_2]
+    )
+    after_split = factors_for_date(
+        "ABC", date(2025, 1, 1), [dividend_1, split, dividend_2]
+    )
+
+    assert before_split.price == Decimal("0.5")
+    assert before_split.volume == Decimal("2")
+    assert after_split.price == Decimal("1")
+    assert after_split.volume == Decimal("1")
+
+
+def test_validate_actions_refuses_unsupported_matching_action():
     unsupported = parse_corporate_action(
         record("Rights issue of equity shares 1:4 at Rs. 10")
     )
 
     with pytest.raises(UnsupportedCorporateActionError, match="ABC"):
-        factors_for_date("ABC", date(2026, 8, 1), [unsupported])
+        validate_actions(["ABC"], [unsupported])
 
 
-def test_factors_ignore_unsupported_action_for_other_symbol():
+def test_validate_actions_allows_unsupported_action_for_other_symbol():
     unsupported = parse_corporate_action(
         record("Rights issue of equity shares 1:4 at Rs. 10", symbol="XYZ")
     )
 
-    factors = factors_for_date("ABC", date(2026, 8, 1), [unsupported])
+    validate_actions(["ABC"], [unsupported])
 
-    assert factors.price == Decimal("1")
-    assert factors.volume == Decimal("1")
+
+def test_validate_actions_allows_ignored_matching_action():
+    dividend = parse_corporate_action(record("Interim dividend Rs. 8 per share"))
+
+    validate_actions(["ABC"], [dividend])
+
+
+def test_validate_actions_honors_date_range():
+    unsupported = parse_corporate_action(
+        record("Rights issue of equity shares 1:4 at Rs. 10", ex_date=date(2020, 1, 1))
+    )
+
+    validate_actions(["ABC"], [unsupported], start_date=date(2021, 1, 1))
 
 
 def test_record_validation_rejects_missing_symbol_or_purpose():
