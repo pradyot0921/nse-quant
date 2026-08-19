@@ -145,7 +145,7 @@ def parse_corporate_action(record: CorporateActionRecord) -> ParsedCorporateActi
     if "scheme of arrangement" in purpose:
         return _unsupported(
             record,
-            "Scheme Of arrangement requires corporate-reorganisation support; quarantine for manual review.",
+            "Scheme of arrangement requires corporate-reorganisation support; quarantine for manual review.",
         )
 
     if has_bonus and has_split:
