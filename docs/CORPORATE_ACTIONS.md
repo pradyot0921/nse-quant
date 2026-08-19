@@ -1,7 +1,7 @@
 # Corporate-Action Adjustment Notes
 
 **Status:** Phase 1 implementation note  
-**Decision anchor:** D-016 and D-017 in `docs/DECISIONS.md`
+**Decision anchor:** D-016, D-017, and D-018 in `docs/DECISIONS.md`
 
 ## V1 Supported Actions
 
@@ -9,6 +9,9 @@ The first corporate-action parser supports only deterministic single-event actio
 
 - stock splits where the purpose text contains an old face value and a new face value;
 - bonus issues where the purpose text contains exactly one colon-separated ratio.
+
+Real NSE split wording includes `Per Share` between each face value and the
+`To` separator. That form is supported explicitly.
 
 ## Ignored No-Op Actions
 
@@ -29,6 +32,11 @@ Unsupported or ambiguous events affecting a frozen-universe symbol during the re
 
 The ingestion/data-build layer must call `validate_actions()` once for the target symbols and research date range before factor lookup or adjusted data construction. `factors_for_date()` is a pure lookup that assumes the input has already passed validation.
 
+Any purpose string containing `Scheme Of Arrangement` is unsupported in V1,
+even when it also contains split or bonus language. A scheme is a corporate
+reorganisation and is not safe to reduce to one mechanical split or equity-bonus
+factor.
+
 ## Ambiguous Or Combined Events
 
 A single NSE purpose string that contains both a split and a bonus is unsupported in V1.
@@ -40,6 +48,9 @@ The current parser returns one `ParsedCorporateAction`, so it cannot safely repr
 Bonus ratios use a colon separator. Slash-separated tokens are not accepted as bonus ratios because they collide with dates in NSE purpose text.
 
 If more than one colon-shaped ratio token appears in the purpose text, the record is unsupported. The parser must not pick the first ratio and continue.
+
+Bonus issues of non-equity instruments are unsupported. This includes
+debentures, preference shares, NCRPS, NCDs, CRPS, OCRPS, and warrants.
 
 ## Adjustment Precision
 
@@ -54,11 +65,13 @@ Final accounting and NAV values still use the separate money precision documente
 The parser test set must include:
 
 - a clean split;
+- real NSE `Face Value Split (Sub-Division)` wording;
 - a clean bonus;
 - a date near a bonus ratio;
 - a slash-separated non-ratio token;
 - multiple ratio-shaped tokens;
 - a combined split-plus-bonus string;
+- a scheme-of-arrangement string containing bonus text;
 - non-equity bonus instruments;
 - ignored dividends / meetings / name changes;
 - a consolidation;
