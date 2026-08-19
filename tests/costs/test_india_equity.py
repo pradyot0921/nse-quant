@@ -3,7 +3,12 @@ from decimal import Decimal
 
 import pytest
 
-from nse_quant.costs.india_equity import Fill, TradeSide, calculate_daily_costs
+from nse_quant.costs.india_equity import (
+    DPChargeProfile,
+    Fill,
+    TradeSide,
+    calculate_daily_costs,
+)
 
 
 DAY = date(2026, 8, 19)
@@ -62,6 +67,18 @@ def test_multi_symbol_same_day_sells_get_one_dp_charge_per_symbol():
     assert costs.dp_charges == Decimal("30.68")
 
 
+def test_female_primary_dp_profile_uses_discounted_charge():
+    costs = calculate_daily_costs(
+        [
+            fill("ABC", TradeSide.SELL, 5, "100"),
+            fill("XYZ", TradeSide.SELL, 3, "101"),
+        ],
+        dp_profile=DPChargeProfile.FEMALE_PRIMARY,
+    )
+
+    assert costs.dp_charges == Decimal("30.10")
+
+
 def test_buy_only_trade_has_no_delivery_sell_dp_charge():
     costs = calculate_daily_costs([fill("ABC", TradeSide.BUY, 5, "100")])
 
@@ -80,6 +97,12 @@ def test_stt_uses_explicit_half_up_nearest_rupee_rounding():
     costs = calculate_daily_costs([fill("ABC", TradeSide.BUY, 105, "100")])
 
     assert costs.stt_buy == Decimal("11")
+
+
+def test_small_trade_stt_can_round_to_zero_pending_real_note_validation():
+    costs = calculate_daily_costs([fill("ABC", TradeSide.SELL, 1, "100")])
+
+    assert costs.stt_sell == Decimal("0")
 
 
 def test_stt_is_aggregated_and_rounded_once_per_day_per_side():
@@ -116,6 +139,84 @@ def test_gst_base_excludes_stamp_duty_and_dp_charges():
         Decimal("0.01")
     )
     assert costs.gst != (wrong_gst_base * Decimal("0.18")).quantize(Decimal("0.01"))
+
+
+def test_total_cost_equals_sum_of_components():
+    costs = calculate_daily_costs(
+        [
+            fill("ABC", TradeSide.BUY, 100, "101.15"),
+            fill("XYZ", TradeSide.SELL, 25, "204.75"),
+        ]
+    )
+
+    component_sum = (
+        costs.brokerage
+        + costs.stt_buy
+        + costs.stt_sell
+        + costs.exchange_transaction_charge
+        + costs.sebi_turnover_charge
+        + costs.gst
+        + costs.stamp_duty
+        + costs.dp_charges
+    )
+
+    assert costs.total_cost == component_sum
+
+
+def test_allocated_cost_components_sum_back_to_daily_total():
+    costs = calculate_daily_costs(
+        [
+            fill("ABC", TradeSide.BUY, 105, "50"),
+            fill("XYZ", TradeSide.BUY, 105, "50"),
+            fill("ABC", TradeSide.SELL, 50, "102"),
+            fill("ABC", TradeSide.SELL, 25, "103"),
+            fill("XYZ", TradeSide.SELL, 25, "104"),
+        ]
+    )
+
+    assert len(costs.allocations) == 5
+    for component in (
+        "brokerage",
+        "stt_buy",
+        "stt_sell",
+        "exchange_transaction_charge",
+        "sebi_turnover_charge",
+        "gst",
+        "stamp_duty",
+        "dp_charges",
+        "total_cost",
+    ):
+        allocated = sum(
+            (getattr(row, component) for row in costs.allocations), Decimal("0")
+        )
+        assert allocated == getattr(costs, component)
+
+
+def test_allocated_dp_is_directed_to_sold_symbols_only():
+    costs = calculate_daily_costs(
+        [
+            fill("BUYONLY", TradeSide.BUY, 10, "100"),
+            fill("ABC", TradeSide.SELL, 5, "100"),
+            fill("ABC", TradeSide.SELL, 5, "101"),
+            fill("XYZ", TradeSide.SELL, 5, "100"),
+        ]
+    )
+
+    buy_only_dp = [
+        row.dp_charges for row in costs.allocations if row.fill.symbol == "BUYONLY"
+    ]
+    abc_dp = sum(
+        (row.dp_charges for row in costs.allocations if row.fill.symbol == "ABC"),
+        Decimal("0"),
+    )
+    xyz_dp = sum(
+        (row.dp_charges for row in costs.allocations if row.fill.symbol == "XYZ"),
+        Decimal("0"),
+    )
+
+    assert buy_only_dp == [Decimal("0")]
+    assert abc_dp == Decimal("15.34")
+    assert xyz_dp == Decimal("15.34")
 
 
 @pytest.mark.parametrize(
