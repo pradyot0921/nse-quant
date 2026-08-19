@@ -328,3 +328,37 @@ UNSUPPORTED=82
 
 **Affected experiments:** Universe construction, data validation, and all downstream Phase 1 backtests
 **Rerun required:** No universe has been frozen yet.
+
+---
+
+## D-021 — Full-window corporate-action exclusion before V0 universe freeze
+
+**Date:** 19 August 2026
+**Status:** Accepted
+
+**Old rule:** The V0 universe rule excluded rights issues but did not explicitly require a full research-window corporate-action scan before freezing the 20 symbols, nor did it state how to treat other `UNSUPPORTED` actions discovered outside the one-year parser corpus.
+
+**New rule:** Before freezing the V0 universe, run the corporate-action parser over the full intended research window for all candidate symbols. Any candidate with an `UNSUPPORTED` corporate action inside the research window is excluded from V0 unless a later decision adds deterministic support for that action type before universe selection. Report the candidate count excluded by this rule and list the excluded symbols and action purposes in the universe-freeze artifact.
+
+**Reason:** The one-year corpus scan proved parser vocabulary, but a longer research window across Nifty 100 candidates can contain rights issues, demergers, schemes of arrangement, mergers, or other unsupported events. Excluding affected candidates before B001 results exist prevents deadline pressure from weakening the quarantine gate after partial results are visible.
+
+**Bias note:** V0 already accepts survivorship bias. This rule adds a second explicit filter toward stable, continuously listed large caps without unsupported corporate-action events. V0 dataset labels and reports must disclose both biases.
+
+**Affected experiments:** Universe construction, data validation, and all downstream Phase 1 backtests
+**Rerun required:** No universe has been frozen yet.
+
+---
+
+## D-022 — NSE UDiFF loader calendar and series policy
+
+**Date:** 19 August 2026
+**Status:** Accepted
+
+**Old rule:** The UDiFF loader did not define how to distinguish a market holiday from a missing raw file, and did not freeze the permitted security series for V0.
+
+**New rule:** The NSE CM-UDiFF loader must receive or load a version-controlled expected trading-session calendar for the requested date range. Missing UDiFF files for expected sessions are data failures; non-session dates are not expected files. V0 loads only `EQ` series rows for equity research. Non-`EQ` rows must be rejected or reported explicitly and must not silently enter the research universe.
+
+**Reason:** A date gap can mean a holiday, a failed download, or an unpublished file, and the loader cannot classify that without an explicit calendar. `BE` and other non-`EQ` series have different settlement or liquidity characteristics, so allowing them into the V0 universe would violate the locked market scope and liquidity assumptions.
+
+**Affected experiments:** UDiFF loader, data validation, universe construction, and all downstream Phase 1 backtests
+**Rerun required:** No market-data pipeline or universe has been frozen yet.
