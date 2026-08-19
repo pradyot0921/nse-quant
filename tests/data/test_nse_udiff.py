@@ -86,6 +86,7 @@ def test_parse_cm_udiff_zip_normalizes_eq_rows_and_reports_rejected_series(tmp_p
     assert bhavcopy.trade_date == date(2025, 10, 31)
     assert bhavcopy.source_name == source.name
     assert bhavcopy.rejected_series_counts == {"BE": 1, "SM": 1}
+    assert bhavcopy.rejected_rows == ()
     assert bhavcopy.session_ids == ("F1",)
     assert len(bhavcopy.bars) == 1
 
@@ -147,8 +148,37 @@ def test_parse_cm_udiff_rejects_duplicate_eq_symbol(tmp_path):
         ],
     )
 
-    with pytest.raises(UDiffDataQualityError, match="duplicate EQ symbol BEML"):
-        parse_cm_udiff_file(source)
+    bhavcopy = parse_cm_udiff_file(source)
+
+    assert len(bhavcopy.bars) == 1
+    assert len(bhavcopy.rejected_rows) == 1
+    assert bhavcopy.rejected_rows[0].symbol == "BEML"
+    assert "duplicate EQ symbol BEML" in bhavcopy.rejected_rows[0].reason
+
+
+def test_parse_cm_udiff_keeps_good_rows_when_one_eq_row_is_rejected(tmp_path):
+    source = tmp_path / "BhavCopy_NSE_CM_0_0_0_20251031_F_0000.csv"
+    write_csv(
+        source,
+        [
+            row(),
+            row(
+                TckrSymb="BADROW",
+                FinInstrmId="201",
+                ISIN="INE000A01010",
+                PrvsClsgPric="0",
+            ),
+            row(TckrSymb="GOODROW", FinInstrmId="202", ISIN="INE000A01011"),
+        ],
+    )
+
+    bhavcopy = parse_cm_udiff_file(source)
+
+    assert [bar.symbol for bar in bhavcopy.bars] == ["BEML", "GOODROW"]
+    assert len(bhavcopy.rejected_rows) == 1
+    assert bhavcopy.rejected_rows[0].row_number == 3
+    assert bhavcopy.rejected_rows[0].symbol == "BADROW"
+    assert "PrvsClsgPric must be positive" in bhavcopy.rejected_rows[0].reason
 
 
 @pytest.mark.parametrize(
@@ -164,24 +194,46 @@ def test_parse_cm_udiff_rejects_non_tradeable_eq_rows(tmp_path, overrides):
     source = tmp_path / "BhavCopy_NSE_CM_0_0_0_20251031_F_0000.csv"
     write_csv(source, [row(**overrides)])
 
-    with pytest.raises(UDiffDataQualityError, match="must be positive"):
-        parse_cm_udiff_file(source)
+    bhavcopy = parse_cm_udiff_file(source)
+
+    assert bhavcopy.bars == ()
+    assert len(bhavcopy.rejected_rows) == 1
+    assert "must be positive" in bhavcopy.rejected_rows[0].reason
 
 
 def test_parse_cm_udiff_rejects_vwap_outside_low_high_range(tmp_path):
     source = tmp_path / "BhavCopy_NSE_CM_0_0_0_20251031_F_0000.csv"
     write_csv(source, [row(TtlTrfVal="100000000.00")])
 
-    with pytest.raises(UDiffDataQualityError, match="outside low/high"):
-        parse_cm_udiff_file(source)
+    bhavcopy = parse_cm_udiff_file(source)
+
+    assert bhavcopy.bars == ()
+    assert len(bhavcopy.rejected_rows) == 1
+    assert "outside low/high" in bhavcopy.rejected_rows[0].reason
+
+
+def test_parse_cm_udiff_allows_half_paisa_vwap_range_tolerance(tmp_path):
+    source = tmp_path / "BhavCopy_NSE_CM_0_0_0_20251031_F_0000.csv"
+    tolerated_traded_value = (Decimal("4505.001") * Decimal("349959")).quantize(
+        Decimal("0.01")
+    )
+    write_csv(source, [row(TtlTrfVal=str(tolerated_traded_value))])
+
+    bhavcopy = parse_cm_udiff_file(source)
+
+    assert len(bhavcopy.bars) == 1
+    assert bhavcopy.rejected_rows == ()
 
 
 def test_parse_cm_udiff_rejects_price_outside_low_high_range(tmp_path):
     source = tmp_path / "BhavCopy_NSE_CM_0_0_0_20251031_F_0000.csv"
     write_csv(source, [row(OpnPric="5000.00")])
 
-    with pytest.raises(UDiffDataQualityError, match="OpnPric"):
-        parse_cm_udiff_file(source)
+    bhavcopy = parse_cm_udiff_file(source)
+
+    assert bhavcopy.bars == ()
+    assert len(bhavcopy.rejected_rows) == 1
+    assert "OpnPric" in bhavcopy.rejected_rows[0].reason
 
 
 def test_parse_cm_udiff_requires_single_csv_inside_zip(tmp_path):
