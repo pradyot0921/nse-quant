@@ -129,6 +129,14 @@ def test_parse_cm_udiff_rejects_filename_date_mismatch(tmp_path):
         parse_cm_udiff_file(source)
 
 
+def test_parse_cm_udiff_rejects_business_date_mismatch(tmp_path):
+    source = tmp_path / "BhavCopy_NSE_CM_0_0_0_20251031_F_0000.csv"
+    write_csv(source, [row(BizDt="2025-11-03")])
+
+    with pytest.raises(UDiffDataQualityError, match="BizDt"):
+        parse_cm_udiff_file(source)
+
+
 def test_parse_cm_udiff_rejects_duplicate_eq_symbol(tmp_path):
     source = tmp_path / "BhavCopy_NSE_CM_0_0_0_20251031_F_0000.csv"
     write_csv(
