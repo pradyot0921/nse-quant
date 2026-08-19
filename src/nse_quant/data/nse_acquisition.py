@@ -5,11 +5,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 import csv
+import io
 from pathlib import Path
 import re
 import tempfile
+import time
 from typing import Callable, Iterable
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+import zipfile
 
 
 CM_UDIFF_ARCHIVE_URL_TEMPLATE = (
@@ -25,6 +29,14 @@ DEFAULT_USER_AGENT = (
 
 class UDiffAcquisitionError(RuntimeError):
     """Raised when a raw CM-UDiFF file cannot be acquired safely."""
+
+
+class UDiffArchiveNotFoundError(UDiffAcquisitionError):
+    """Raised when NSE reports that a requested CM-UDiFF archive is absent."""
+
+
+class UDiffDownloadRetryableError(UDiffAcquisitionError):
+    """Raised when a CM-UDiFF download failure should be retried."""
 
 
 class TradingCalendarError(ValueError):
@@ -147,12 +159,32 @@ def audit_cm_udiff_raw_files(
     )
 
 
+def research_sessions(
+    sessions: Iterable[TradingSession],
+    *,
+    include_special: bool = False,
+) -> tuple[TradingSession, ...]:
+    """Return sessions eligible for research bars.
+
+    Special sessions remain in the calendar for raw-file auditing but are
+    excluded from the V0 research bar series unless explicitly requested.
+    """
+
+    return tuple(
+        session
+        for session in sessions
+        if include_special or session.session_type == "NORMAL"
+    )
+
+
 def download_cm_udiff_file(
     session_date: date,
     raw_root: str | Path,
     *,
     overwrite: bool = False,
     fetch_bytes: Callable[[str], bytes] | None = None,
+    max_retries: int = 3,
+    retry_delay_seconds: float = 1.0,
 ) -> Path:
     """Download one CM-UDiFF ZIP to immutable raw storage."""
 
@@ -161,11 +193,14 @@ def download_cm_udiff_file(
         return destination
 
     fetcher = fetch_bytes or _fetch_url
-    content = fetcher(cm_udiff_archive_url(session_date))
-    if not content.startswith(b"PK"):
-        raise UDiffAcquisitionError(
-            f"{destination.name}: downloaded content is not a ZIP archive"
-        )
+    url = cm_udiff_archive_url(session_date)
+    content = _fetch_with_retries(
+        url,
+        fetcher=fetcher,
+        max_retries=max_retries,
+        retry_delay_seconds=retry_delay_seconds,
+    )
+    _validate_single_csv_zip(content, archive_name=destination.name)
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
@@ -179,6 +214,54 @@ def download_cm_udiff_file(
 
     temp_path.replace(destination)
     return destination
+
+
+def _fetch_with_retries(
+    url: str,
+    *,
+    fetcher: Callable[[str], bytes],
+    max_retries: int,
+    retry_delay_seconds: float,
+) -> bytes:
+    if max_retries < 0:
+        raise ValueError("max_retries must be non-negative")
+    if retry_delay_seconds < 0:
+        raise ValueError("retry_delay_seconds must be non-negative")
+
+    attempts = max_retries + 1
+    for attempt in range(1, attempts + 1):
+        try:
+            return fetcher(url)
+        except UDiffArchiveNotFoundError:
+            raise
+        except UDiffDownloadRetryableError:
+            if attempt == attempts:
+                raise
+            time.sleep(retry_delay_seconds)
+
+    raise AssertionError("unreachable retry loop exit")
+
+
+def _validate_single_csv_zip(content: bytes, *, archive_name: str) -> None:
+    try:
+        with zipfile.ZipFile(io.BytesIO(content)) as archive:
+            csv_names = [
+                name for name in archive.namelist() if name.lower().endswith(".csv")
+            ]
+            if len(csv_names) != 1:
+                raise UDiffAcquisitionError(
+                    f"{archive_name}: expected exactly one CSV in ZIP, "
+                    f"found {len(csv_names)}"
+                )
+            corrupt_member = archive.testzip()
+            if corrupt_member is not None:
+                raise UDiffAcquisitionError(
+                    f"{archive_name}: corrupt ZIP member {corrupt_member}"
+                )
+    except zipfile.BadZipFile:
+        raise UDiffAcquisitionError(
+            f"{archive_name}: downloaded content is not a ZIP archive"
+        ) from None
 
 
 def date_from_cm_udiff_filename(name: str) -> date | None:
@@ -203,5 +286,13 @@ def _fetch_url(url: str) -> bytes:
     try:
         with urlopen(request, timeout=60) as response:
             return response.read()
-    except OSError as exc:
-        raise UDiffAcquisitionError(f"failed to download {url}: {exc}") from exc
+    except HTTPError as exc:
+        if exc.code == 404:
+            raise UDiffArchiveNotFoundError(f"archive not found: {url}") from exc
+        if 500 <= exc.code <= 599:
+            raise UDiffDownloadRetryableError(
+                f"temporary NSE archive error {exc.code}: {url}"
+            ) from exc
+        raise UDiffAcquisitionError(f"NSE archive error {exc.code}: {url}") from exc
+    except URLError as exc:
+        raise UDiffDownloadRetryableError(f"failed to download {url}: {exc}") from exc
