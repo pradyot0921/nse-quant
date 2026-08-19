@@ -122,6 +122,12 @@ def parse_cm_udiff_file(path: str | Path, *, series: str = DEFAULT_SERIES) -> UD
         )
 
     trade_date = next(iter(dates))
+    business_date = next(iter(business_dates))
+    if business_date != trade_date:
+        raise UDiffDataQualityError(
+            f"{source.name}: BizDt {business_date} does not match TradDt {trade_date}"
+        )
+
     filename_date = _date_from_filename(source.name)
     if filename_date is not None and filename_date != trade_date:
         raise UDiffDataQualityError(
