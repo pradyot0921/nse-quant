@@ -67,7 +67,16 @@ def test_multi_symbol_same_day_sells_get_one_dp_charge_per_symbol():
     assert costs.dp_charges == Decimal("30.68")
 
 
-def test_female_primary_dp_profile_uses_discounted_charge():
+def test_female_primary_single_symbol_dp_profile_uses_discounted_charge():
+    costs = calculate_daily_costs(
+        [fill("ABC", TradeSide.SELL, 5, "100")],
+        dp_profile=DPChargeProfile.FEMALE_PRIMARY,
+    )
+
+    assert costs.dp_charges == Decimal("15.05")
+
+
+def test_female_primary_multi_symbol_dp_applies_gst_after_aggregation():
     costs = calculate_daily_costs(
         [
             fill("ABC", TradeSide.SELL, 5, "100"),
@@ -76,7 +85,23 @@ def test_female_primary_dp_profile_uses_discounted_charge():
         dp_profile=DPChargeProfile.FEMALE_PRIMARY,
     )
 
-    assert costs.dp_charges == Decimal("30.10")
+    assert costs.dp_charges == Decimal("30.09")
+
+
+def test_dp_gst_is_not_included_in_normal_trading_charge_gst():
+    fills = [
+        fill("ABC", TradeSide.SELL, 5, "100"),
+        fill("XYZ", TradeSide.SELL, 3, "101"),
+    ]
+
+    male_costs = calculate_daily_costs(fills)
+    female_costs = calculate_daily_costs(
+        fills, dp_profile=DPChargeProfile.FEMALE_PRIMARY
+    )
+
+    assert male_costs.dp_charges == Decimal("30.68")
+    assert female_costs.dp_charges == Decimal("30.09")
+    assert male_costs.gst == female_costs.gst
 
 
 def test_buy_only_trade_has_no_delivery_sell_dp_charge():
