@@ -175,10 +175,11 @@ def test_download_cm_udiff_file_uses_injected_fetcher_and_canonical_path(tmp_pat
     assert called_urls == [cm_udiff_archive_url(date(2025, 10, 31))]
 
 
-def test_download_cm_udiff_file_does_not_overwrite_by_default(tmp_path):
+def test_download_cm_udiff_file_reuses_valid_existing_archive(tmp_path):
     path = cm_udiff_raw_path(tmp_path, date(2025, 10, 31))
     path.parent.mkdir(parents=True)
-    path.write_bytes(b"existing")
+    content = zip_bytes()
+    path.write_bytes(content)
 
     result = download_cm_udiff_file(
         date(2025, 10, 31),
@@ -187,7 +188,20 @@ def test_download_cm_udiff_file_does_not_overwrite_by_default(tmp_path):
     )
 
     assert result == path
-    assert path.read_bytes() == b"existing"
+    assert path.read_bytes() == content
+
+
+def test_download_cm_udiff_file_validates_existing_archive_before_reuse(tmp_path):
+    path = cm_udiff_raw_path(tmp_path, date(2025, 10, 31))
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b"partial interrupted download")
+
+    with pytest.raises(UDiffAcquisitionError, match="not a ZIP"):
+        download_cm_udiff_file(
+            date(2025, 10, 31),
+            tmp_path,
+            fetch_bytes=lambda url: pytest.fail("fetch should not be called"),
+        )
 
 
 def test_download_cm_udiff_file_rejects_non_zip_content(tmp_path):
