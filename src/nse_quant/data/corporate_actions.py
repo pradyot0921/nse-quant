@@ -22,6 +22,7 @@ ADJUSTMENT_FACTOR = Decimal("0.0000000001")
 class CorporateActionType(str, Enum):
     SPLIT = "split"
     BONUS = "bonus"
+    IGNORED = "ignored"
     UNSUPPORTED = "unsupported"
 
 
@@ -137,9 +138,28 @@ def parse_corporate_action(record: CorporateActionRecord) -> ParsedCorporateActi
             "Split action face-value change could not be parsed safely; quarantine for manual review.",
         )
 
+    if _has_ignored_noop_event(purpose):
+        return _ignored(
+            record,
+            "Recognised no-price-adjustment event; ignored for V1 adjusted OHLCV.",
+        )
+
     return _unsupported(
         record,
         "Unsupported corporate-action purpose; quarantine for manual review.",
+    )
+
+
+def _ignored(record: CorporateActionRecord, note: str) -> ParsedCorporateAction:
+    return ParsedCorporateAction(
+        symbol=record.symbol,
+        action_type=CorporateActionType.IGNORED,
+        ex_date=record.ex_date,
+        record_date=record.record_date,
+        purpose=record.purpose,
+        price_adjustment_factor=ONE,
+        volume_adjustment_factor=ONE,
+        note=note,
     )
 
 
@@ -156,6 +176,30 @@ def _unsupported(record: CorporateActionRecord, note: str) -> ParsedCorporateAct
     )
 
 
+def validate_actions(
+    symbols: Iterable[str],
+    actions: Iterable[ParsedCorporateAction],
+    *,
+    start_date: date | None = None,
+    end_date: date | None = None,
+) -> None:
+    """Raise if quarantined actions affect the requested symbols and date range."""
+
+    clean_symbols = {symbol.strip().upper() for symbol in symbols}
+    for action in actions:
+        if action.symbol not in clean_symbols:
+            continue
+        if start_date is not None and action.ex_date < start_date:
+            continue
+        if end_date is not None and action.ex_date > end_date:
+            continue
+        if action.action_type == CorporateActionType.UNSUPPORTED:
+            raise UnsupportedCorporateActionError(
+                f"{action.symbol}: unsupported corporate action on "
+                f"{action.ex_date}: {action.purpose}"
+            )
+
+
 def factors_for_date(
     symbol: str,
     bar_date: date,
@@ -170,11 +214,11 @@ def factors_for_date(
     for action in sorted(actions, key=lambda item: item.ex_date):
         if action.symbol != clean_symbol:
             continue
-        if action.action_type == CorporateActionType.UNSUPPORTED:
-            raise UnsupportedCorporateActionError(
-                f"{action.symbol}: unsupported corporate action on "
-                f"{action.ex_date}: {action.purpose}"
-            )
+        if action.action_type in {
+            CorporateActionType.IGNORED,
+            CorporateActionType.UNSUPPORTED,
+        }:
+            continue
         if bar_date >= action.ex_date:
             continue
         price_factor = _factor(price_factor * action.price_adjustment_factor)
@@ -197,6 +241,20 @@ def _has_split_token(value: str) -> bool:
 
 def _has_unsupported_bonus_instrument(value: str) -> bool:
     return re.search(r"\bbonus\s+(?:debentures?|preference)\b", value) is not None
+
+
+def _has_ignored_noop_event(value: str) -> bool:
+    ignored_patterns = [
+        r"\bdividend\b",
+        r"\bagm\b",
+        r"\begm\b",
+        r"\bannual general meeting\b",
+        r"\bextraordinary general meeting\b",
+        r"\bboard meeting\b",
+        r"\bchange(?:d)? in name\b",
+        r"\bname change\b",
+    ]
+    return any(re.search(pattern, value) is not None for pattern in ignored_patterns)
 
 
 def _parse_bonus_ratio(value: str) -> tuple[Decimal, Decimal] | None:
