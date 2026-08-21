@@ -181,7 +181,6 @@ def download_cm_udiff_file(
     session_date: date,
     raw_root: str | Path,
     *,
-    overwrite: bool = False,
     fetch_bytes: Callable[[str], bytes] | None = None,
     max_retries: int = 3,
     retry_delay_seconds: float = 1.0,
@@ -189,7 +188,11 @@ def download_cm_udiff_file(
     """Download one CM-UDiFF ZIP to immutable raw storage."""
 
     destination = cm_udiff_raw_path(raw_root, session_date)
-    if destination.exists() and not overwrite:
+    if destination.exists():
+        _validate_single_csv_zip(
+            destination.read_bytes(),
+            archive_name=destination.name,
+        )
         return destination
 
     fetcher = fetch_bytes or _fetch_url

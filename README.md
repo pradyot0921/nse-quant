@@ -5,4 +5,4 @@ Auditable quantitative research framework for NSE cash-equity delivery strategie
 This project prioritises deterministic accounting, realistic Indian trading costs,
 reproducibility, and research discipline over impressive backtest results.
 
-Current phase: Phase 1 vertical slice, beginning with the India equity cost engine.
+Current phase: Phase 1 vertical slice, building the reproducible NSE data pipeline.
