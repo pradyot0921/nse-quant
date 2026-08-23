@@ -871,6 +871,19 @@ A pre-specified form of relative strength may persist sufficiently to produce a 
 
 All three specifications below must be entered into `experiments/ledger.csv` **before B001 is executed**.
 
+All six Phase 1 ledger rows use the same pre-registered date split:
+
+```text
+research_period:   2016-01-01 through 2022-12-31, inclusive
+validation_period: 2023-01-01 through 2026-08-19, inclusive
+```
+
+The validation period is a one-time holdout for Phase 1 B001/B002/B003
+evaluation. Once inspected, it is contaminated for future selection or
+parameter tuning. Newly accumulated market data after 2026-08-19 is the next
+unseen frontier unless a later decision explicitly labels reused data as
+previously inspected.
+
 #### B001 — 3-position weekly momentum baseline
 
 ```text

@@ -783,6 +783,33 @@ Newly accumulated market data can become the next genuinely unseen evaluation fr
 
 Never describe repeatedly inspected data as untouched out-of-sample evidence.
 
+### 12.6 Phase 1 V0 research window
+
+The Phase 1 V0 research/training period is fixed as:
+
+```text
+2016-01-01 through 2022-12-31, inclusive
+```
+
+The Phase 1 V0 validation period is fixed as:
+
+```text
+2023-01-01 through 2026-08-19, inclusive
+```
+
+The full V0 data-audit window is therefore:
+
+```text
+2016-01-01 through 2026-08-19, inclusive
+```
+
+The validation block is a one-time holdout for B001/B002/B003 evaluation. Once
+its strategy performance is inspected, it is no longer untouched
+out-of-sample evidence. Future research that requires fresh unseen data must
+use newly accumulated post-2026-08-19 market data as the next frontier, or
+explicitly label any reuse of the 2023-2026 validation block as previously
+inspected.
+
 ---
 
 ## 13. Baseline Strategy B001
