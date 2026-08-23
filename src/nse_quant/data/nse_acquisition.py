@@ -21,6 +21,7 @@ CM_UDIFF_ARCHIVE_URL_TEMPLATE = (
     "BhavCopy_NSE_CM_0_0_0_{yyyymmdd}_F_0000.csv.zip"
 )
 SESSION_CALENDAR_COLUMNS = ("date", "session_type", "source")
+COMPACT_SESSION_CALENDAR_COLUMNS = ("date", "session_type")
 DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (compatible; nse-quant-research/0.1; "
     "+https://github.com/pradyot0921/nse-quant)"
@@ -89,7 +90,11 @@ def load_session_calendar(path: str | Path) -> tuple[TradingSession, ...]:
     source = Path(path)
     with source.open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
-        if tuple(reader.fieldnames or ()) != SESSION_CALENDAR_COLUMNS:
+        fieldnames = tuple(reader.fieldnames or ())
+        if fieldnames not in {
+            SESSION_CALENDAR_COLUMNS,
+            COMPACT_SESSION_CALENDAR_COLUMNS,
+        }:
             raise TradingCalendarError(
                 f"{source.name}: unexpected columns {reader.fieldnames!r}"
             )
@@ -110,7 +115,13 @@ def load_session_calendar(path: str | Path) -> tuple[TradingSession, ...]:
                 )
 
             session_type = row["session_type"].strip().upper()
-            source_note = row["source"].strip()
+            if session_type == "N":
+                session_type = "NORMAL"
+            elif session_type == "S":
+                session_type = "SPECIAL"
+            source_note = row.get("source", "").strip()
+            if not source_note and fieldnames == COMPACT_SESSION_CALENDAR_COLUMNS:
+                source_note = "COMPACT_CALENDAR"
             if session_type not in {"NORMAL", "SPECIAL"}:
                 raise TradingCalendarError(
                     f"{source.name}:{row_number}: unsupported session_type {session_type!r}"
