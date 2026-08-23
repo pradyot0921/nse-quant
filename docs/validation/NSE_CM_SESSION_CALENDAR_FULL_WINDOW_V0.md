@@ -17,9 +17,12 @@ Runtime artifact:
 data/calendars/nse_cm_sessions_2016-01-01_2026-08-19.csv
 ```
 
-The CSV uses the compact two-column runtime format: `N` for normal sessions
-derived from NSE's CM holiday API, and `S` for special-session exceptions.
-Full construction evidence is recorded in this validation note.
+The CSV uses the compact two-column runtime format: `START` and `END` define
+the inclusive window, `H` rows remove weekday holidays, and `S` rows add
+special-session exceptions. Only weekday holiday exclusions require `H` rows;
+weekend holiday API rows are counted in the evidence below but do not affect
+runtime expansion. Full construction evidence is recorded in this validation
+note.
 
 ## Derivation
 
