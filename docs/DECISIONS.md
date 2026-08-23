@@ -569,3 +569,20 @@ The D-019 ISIN-continuity guard applies to the legacy CM bhavcopy segment becaus
 **Affected experiments:** Legacy daily-market loader, data validation, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
 
 **Rerun required:** No. No full-window data build, universe freeze, or strategy run exists yet.
+
+## D-033 — Batch market-data acquisition reports full-window outcomes
+
+**Date:** 23 August 2026
+**Status:** Accepted
+
+**Old rule:** Per-file UDiFF and legacy acquisition helpers downloaded or reused one archive at a time. The policy for a decade-scale batch run was unspecified, including whether to halt at the first missing archive or corrupt cached file.
+
+**New rule:** Full-window raw market-data acquisition is a batch orchestration layer above the source-specific per-file helpers. For each checked-in expected session, the batch chooses the registered source family from D-032, attempts acquisition, and records one of: downloaded/reused/redownloaded, archive missing, or acquisition failed. A 404 for an expected session is recorded and the batch continues so all gaps can be resolved together. If an existing cached archive fails ZIP validation, the batch deletes that archive only after verifying it is inside the configured raw-data root, then attempts one fresh download. If that fresh download also fails, the session is recorded as failed rather than silently skipped.
+
+Raw-file auditing remains calendar-driven: expected archives come from the checked-in session calendar and source bridge; files present for dates outside that expectation are reported as unexpected archives.
+
+**Reason:** Full-window acquisition covers roughly 2,500 sessions. Halting on the first missing archive would discover gaps one at a time, while trusting existing paths would let interrupted partial downloads become permanent raw data. Recording all outcomes preserves strict raw-file validation without making long resumable downloads fragile.
+
+**Affected experiments:** UDiff acquisition, legacy acquisition, data validation, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
+
+**Rerun required:** No. No full-window data build, universe freeze, or strategy run exists yet.
