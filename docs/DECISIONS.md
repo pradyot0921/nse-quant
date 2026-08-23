@@ -542,3 +542,30 @@ Before implementing the legacy parser, inspect real legacy files from at least 2
 **Affected experiments:** UDiFF loader, legacy daily-market loader, data validation, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
 
 **Rerun required:** No. No full-window data build, universe freeze, or strategy run exists yet.
+
+---
+
+## D-032 — Legacy market-data bridge uses CM bhavcopy ZIP
+
+**Date:** 23 August 2026
+**Status:** Accepted
+
+**Old rule:** D-031 selected NSE `Full Bhavcopy and Security Deliverable data` as the pre-UDiFF source bridge for 1 January 2016 through 5 July 2024, with raw traded value provisionally mapped from `TURNOVER_LACS * 100000` and legacy ISIN expected to be unavailable.
+
+**New rule:** The pre-UDiFF V0 source bridge uses NSE `CM - Bhavcopy(csv)` historical ZIP files:
+
+```text
+https://nsearchives.nseindia.com/content/historical/EQUITIES/YYYY/MMM/cmDDMMMYYYYbhav.csv.zip
+```
+
+for 1 January 2016 through 5 July 2024. Each legacy ZIP must contain exactly one CSV. The observed canonical mapping is: `TIMESTAMP` to trade date, `SYMBOL`, `SERIES`, `ISIN`, `OPEN`, `HIGH`, `LOW`, `CLOSE`, `LAST`, `PREVCLOSE`, `TOTTRDQTY`, `TOTTRDVAL`, and `TOTALTRADES`. Legacy raw traded value is `TOTTRDVAL` in rupees, not `TURNOVER_LACS * 100000`. Delivery quantity and delivery percentage are not present in this source and must remain absent/null rather than fabricated.
+
+The D-019 ISIN-continuity guard applies to the legacy CM bhavcopy segment because the scanned legacy files include non-blank ISIN for every inspected EQ row.
+
+**Evidence:** `docs/validation/LEGACY_CM_BHAVCOPY_FORMAT_SCAN_V0.md` scanned five real NSE legacy CM bhavcopy ZIPs from 2016, 2019, March 2020, 2022, and 5 July 2024. All five downloaded successfully, had the same header, contained exactly one CSV, had non-blank EQ ISIN values, had no duplicate EQ symbols, and had zero observed `TOTTRDVAL / TOTTRDQTY` low/high range breaches. The provisional `sec_bhavdata_full_DDMMYYYY.csv` source returned 404 for the tested 2016 and 2019 dates, so it cannot be the full-window V0 bridge.
+
+**Reason:** The first real legacy-source scan falsified D-031's source assumption before implementation. The older CM bhavcopy ZIP covers the required 2016 and 2019 dates and includes ISIN plus raw traded value in rupees, making it a stronger bridge source for V0 than the provisional full-bhavcopy choice.
+
+**Affected experiments:** Legacy daily-market loader, data validation, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
+
+**Rerun required:** No. No full-window data build, universe freeze, or strategy run exists yet.

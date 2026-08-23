@@ -316,7 +316,7 @@ The exact thresholds must be written before the resulting list is generated.
 Primary raw daily-market sources:
 
 ```text
-2016-01-01 through 2024-07-05: NSE Full Bhavcopy and Security Deliverable data
+2016-01-01 through 2024-07-05: NSE CM - Bhavcopy(csv) historical ZIP
 2024-07-08 through 2026-08-19: NSE CM-UDiFF Common Bhavcopy Final
 ```
 
@@ -324,8 +324,9 @@ NSE discontinued the older CM bhavcopy/common-bhavcopy formats in July 2024 and 
 
 The two source families must normalize into one canonical daily-bar schema
 before corporate-action adjustment, validation, universe selection, or
-backtesting. The pre-UDiFF source bridge is recorded in D-031 and
-`docs/validation/HISTORICAL_SOURCE_BRIDGE_V0.md`.
+backtesting. The original source bridge is recorded in D-031 and corrected by
+D-032 after real-file validation. The legacy scan is recorded in
+`docs/validation/LEGACY_CM_BHAVCOPY_FORMAT_SCAN_V0.md`.
 
 ### 7.2 Raw-data rule
 

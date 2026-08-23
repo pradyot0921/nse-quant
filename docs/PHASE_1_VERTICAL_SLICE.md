@@ -564,13 +564,13 @@ src/nse_quant/data/nse_legacy_bhavcopy.py
 Use NSE:
 
 ```text
-2016-01-01 through 2024-07-05: Full Bhavcopy and Security Deliverable data
+2016-01-01 through 2024-07-05: CM - Bhavcopy(csv) historical ZIP
 2024-07-08 through 2026-08-19: CM-UDiFF Common Bhavcopy Final
 ```
 
-The legacy parser must not be implemented until real files from the pre-UDiFF
-window have been inspected and recorded in a validation artifact. Do not infer
-the legacy schema from UDiFF or from synthetic rows.
+The legacy parser must follow the real-file scan recorded in
+`docs/validation/LEGACY_CM_BHAVCOPY_FORMAT_SCAN_V0.md`. Do not infer the
+legacy schema from UDiFF or from synthetic rows.
 
 ### 9.2 Raw storage
 
@@ -579,7 +579,7 @@ Raw downloads are immutable.
 Suggested path:
 
 ```text
-data/raw/nse/cm_full_bhavcopy/YYYY/MM/
+data/raw/nse/cm_bhavcopy/YYYY/MM/
 data/raw/nse/cm_udiff/YYYY/MM/
 ```
 
