@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 import csv
 import io
 from pathlib import Path
@@ -21,6 +21,7 @@ CM_UDIFF_ARCHIVE_URL_TEMPLATE = (
     "BhavCopy_NSE_CM_0_0_0_{yyyymmdd}_F_0000.csv.zip"
 )
 SESSION_CALENDAR_COLUMNS = ("date", "session_type", "source")
+COMPACT_SESSION_CALENDAR_COLUMNS = ("date", "session_type")
 DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (compatible; nse-quant-research/0.1; "
     "+https://github.com/pradyot0921/nse-quant)"
@@ -89,14 +90,28 @@ def load_session_calendar(path: str | Path) -> tuple[TradingSession, ...]:
     source = Path(path)
     with source.open(encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
-        if tuple(reader.fieldnames or ()) != SESSION_CALENDAR_COLUMNS:
+        fieldnames = tuple(reader.fieldnames or ())
+        if fieldnames not in {
+            SESSION_CALENDAR_COLUMNS,
+            COMPACT_SESSION_CALENDAR_COLUMNS,
+        }:
             raise TradingCalendarError(
                 f"{source.name}: unexpected columns {reader.fieldnames!r}"
             )
 
+        rows = tuple(enumerate(reader, start=2))
+        if (
+            fieldnames == COMPACT_SESSION_CALENDAR_COLUMNS
+            and any(
+                row["session_type"].strip().upper() in {"START", "END", "H"}
+                for _, row in rows
+            )
+        ):
+            return _load_compact_session_calendar(source.name, rows)
+
         sessions = []
         seen_dates: set[date] = set()
-        for row_number, row in enumerate(reader, start=2):
+        for row_number, row in rows:
             try:
                 session_date = date.fromisoformat(row["date"].strip())
             except ValueError:
@@ -110,7 +125,13 @@ def load_session_calendar(path: str | Path) -> tuple[TradingSession, ...]:
                 )
 
             session_type = row["session_type"].strip().upper()
-            source_note = row["source"].strip()
+            if session_type == "N":
+                session_type = "NORMAL"
+            elif session_type == "S":
+                session_type = "SPECIAL"
+            source_note = row.get("source", "").strip()
+            if not source_note and fieldnames == COMPACT_SESSION_CALENDAR_COLUMNS:
+                source_note = "COMPACT_CALENDAR"
             if session_type not in {"NORMAL", "SPECIAL"}:
                 raise TradingCalendarError(
                     f"{source.name}:{row_number}: unsupported session_type {session_type!r}"
@@ -128,6 +149,72 @@ def load_session_calendar(path: str | Path) -> tuple[TradingSession, ...]:
                     source=source_note,
                 )
             )
+
+    return tuple(sorted(sessions, key=lambda session: session.session_date))
+
+
+def _load_compact_session_calendar(
+    source_name: str,
+    rows: tuple[tuple[int, dict[str, str]], ...],
+) -> tuple[TradingSession, ...]:
+    start_date = None
+    end_date = None
+    holidays: set[date] = set()
+    special_dates: set[date] = set()
+
+    for row_number, row in rows:
+        try:
+            session_date = date.fromisoformat(row["date"].strip())
+        except ValueError:
+            raise TradingCalendarError(
+                f"{source_name}:{row_number}: date is not ISO formatted"
+            ) from None
+
+        session_type = row["session_type"].strip().upper()
+        if session_type == "START":
+            if start_date is not None:
+                raise TradingCalendarError(
+                    f"{source_name}:{row_number}: duplicate START"
+                )
+            start_date = session_date
+        elif session_type == "END":
+            if end_date is not None:
+                raise TradingCalendarError(
+                    f"{source_name}:{row_number}: duplicate END"
+                )
+            end_date = session_date
+        elif session_type == "H":
+            holidays.add(session_date)
+        elif session_type == "S":
+            special_dates.add(session_date)
+        else:
+            raise TradingCalendarError(
+                f"{source_name}:{row_number}: unsupported session_type {session_type!r}"
+            )
+
+    if start_date is None or end_date is None:
+        raise TradingCalendarError(f"{source_name}: START and END are required")
+    if end_date < start_date:
+        raise TradingCalendarError(f"{source_name}: END is before START")
+
+    sessions = []
+    current = start_date
+    while current <= end_date:
+        if current.weekday() < 5 and current not in holidays:
+            sessions.append(TradingSession(current, "NORMAL", "COMPACT_CALENDAR"))
+        current += timedelta(days=1)
+
+    existing_dates = {session.session_date for session in sessions}
+    for special_date in sorted(special_dates):
+        if special_date in existing_dates:
+            raise TradingCalendarError(
+                f"{source_name}: special session overlaps normal session {special_date}"
+            )
+        if not start_date <= special_date <= end_date:
+            raise TradingCalendarError(
+                f"{source_name}: special session outside window {special_date}"
+            )
+        sessions.append(TradingSession(special_date, "SPECIAL", "COMPACT_CALENDAR"))
 
     return tuple(sorted(sessions, key=lambda session: session.session_date))
 

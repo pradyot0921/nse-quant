@@ -28,6 +28,12 @@ CALENDAR_PATH = (
     / "calendars"
     / "nse_cm_sessions_2025-08-20_2026-08-19.csv"
 )
+FULL_WINDOW_CALENDAR_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "calendars"
+    / "nse_cm_sessions_2016-01-01_2026-08-19.csv"
+)
 
 
 def write_calendar(path, rows):
@@ -104,6 +110,45 @@ def test_load_session_calendar_normalizes_and_sorts_rows(tmp_path):
     )
 
 
+def test_load_session_calendar_accepts_compact_rows(tmp_path):
+    source = tmp_path / "sessions.csv"
+    source.write_text(
+        "date,session_type\n"
+        "2026-02-01,S\n"
+        "2025-10-31,N\n",
+        encoding="utf-8",
+    )
+
+    sessions = load_session_calendar(source)
+
+    assert sessions == (
+        TradingSession(date(2025, 10, 31), "NORMAL", "COMPACT_CALENDAR"),
+        TradingSession(date(2026, 2, 1), "SPECIAL", "COMPACT_CALENDAR"),
+    )
+
+
+def test_load_session_calendar_expands_compact_directives(tmp_path):
+    source = tmp_path / "sessions.csv"
+    source.write_text(
+        "date,session_type\n"
+        "2026-01-01,START\n"
+        "2026-01-04,S\n"
+        "2026-01-05,H\n"
+        "2026-01-07,END\n",
+        encoding="utf-8",
+    )
+
+    sessions = load_session_calendar(source)
+
+    assert sessions == (
+        TradingSession(date(2026, 1, 1), "NORMAL", "COMPACT_CALENDAR"),
+        TradingSession(date(2026, 1, 2), "NORMAL", "COMPACT_CALENDAR"),
+        TradingSession(date(2026, 1, 4), "SPECIAL", "COMPACT_CALENDAR"),
+        TradingSession(date(2026, 1, 6), "NORMAL", "COMPACT_CALENDAR"),
+        TradingSession(date(2026, 1, 7), "NORMAL", "COMPACT_CALENDAR"),
+    )
+
+
 def test_load_session_calendar_rejects_duplicates(tmp_path):
     source = tmp_path / "sessions.csv"
     write_calendar(
@@ -137,6 +182,38 @@ def test_committed_v0_calendar_contains_expected_special_sessions():
     assert by_date[date(2025, 10, 21)].session_type == "SPECIAL"
     assert by_date[date(2026, 2, 1)].session_type == "SPECIAL"
     assert date(2025, 10, 22) not in by_date
+
+
+def test_committed_full_window_calendar_contains_expected_special_sessions():
+    sessions = load_session_calendar(FULL_WINDOW_CALENDAR_PATH)
+    by_date = {session.session_date: session for session in sessions}
+    special_dates = {
+        session.session_date
+        for session in sessions
+        if session.session_type == "SPECIAL"
+    }
+
+    assert len(sessions) == 2631
+    assert special_dates == {
+        date(2016, 10, 30),
+        date(2017, 10, 19),
+        date(2018, 11, 7),
+        date(2019, 10, 27),
+        date(2020, 2, 1),
+        date(2020, 11, 14),
+        date(2021, 11, 4),
+        date(2022, 10, 24),
+        date(2023, 11, 12),
+        date(2024, 11, 1),
+        date(2025, 2, 1),
+        date(2025, 10, 21),
+        date(2026, 2, 1),
+    }
+    assert by_date[date(2016, 1, 1)].session_type == "NORMAL"
+    assert by_date[date(2026, 8, 19)].session_type == "NORMAL"
+    assert date(2024, 7, 6) not in by_date
+    assert date(2024, 7, 7) not in by_date
+    assert len(research_sessions(sessions)) == 2618
 
 
 def test_audit_cm_udiff_raw_files_reports_missing_and_unexpected(tmp_path):
