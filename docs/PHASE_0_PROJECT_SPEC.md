@@ -313,11 +313,19 @@ The exact thresholds must be written before the resulting list is generated.
 
 ### 7.1 Primary source
 
-Primary raw daily-market source:
+Primary raw daily-market sources:
 
-**NSE CM-UDiFF Common Bhavcopy Final**
+```text
+2016-01-01 through 2024-07-05: NSE Full Bhavcopy and Security Deliverable data
+2024-07-08 through 2026-08-19: NSE CM-UDiFF Common Bhavcopy Final
+```
 
 NSE discontinued the older CM bhavcopy/common-bhavcopy formats in July 2024 and directs users to the UDiFF common bhavcopy format.
+
+The two source families must normalize into one canonical daily-bar schema
+before corporate-action adjustment, validation, universe selection, or
+backtesting. The pre-UDiFF source bridge is recorded in D-031 and
+`docs/validation/HISTORICAL_SOURCE_BRIDGE_V0.md`.
 
 ### 7.2 Raw-data rule
 
