@@ -127,6 +127,28 @@ def test_load_session_calendar_accepts_compact_rows(tmp_path):
     )
 
 
+def test_load_session_calendar_expands_compact_directives(tmp_path):
+    source = tmp_path / "sessions.csv"
+    source.write_text(
+        "date,session_type\n"
+        "2026-01-01,START\n"
+        "2026-01-04,S\n"
+        "2026-01-05,H\n"
+        "2026-01-07,END\n",
+        encoding="utf-8",
+    )
+
+    sessions = load_session_calendar(source)
+
+    assert sessions == (
+        TradingSession(date(2026, 1, 1), "NORMAL", "COMPACT_CALENDAR"),
+        TradingSession(date(2026, 1, 2), "NORMAL", "COMPACT_CALENDAR"),
+        TradingSession(date(2026, 1, 4), "SPECIAL", "COMPACT_CALENDAR"),
+        TradingSession(date(2026, 1, 6), "NORMAL", "COMPACT_CALENDAR"),
+        TradingSession(date(2026, 1, 7), "NORMAL", "COMPACT_CALENDAR"),
+    )
+
+
 def test_load_session_calendar_rejects_duplicates(tmp_path):
     source = tmp_path / "sessions.csv"
     write_calendar(
