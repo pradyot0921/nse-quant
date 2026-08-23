@@ -489,3 +489,26 @@ In the backtester, a missing valid bar for a held symbol means no fill can occur
 **Affected experiments:** UDiFF loader, data validation, universe construction, B001/B002/B003, backtester, reporting, and all downstream Phase 1 backtests.
 
 **Rerun required:** No market-data pipeline, universe, or strategy run has been frozen yet.
+
+---
+
+## D-030 — Phase 1 research window and validation split
+
+**Date:** 22 August 2026
+**Status:** Accepted
+
+**Old rule:** The Phase 1 experiment ledger left `research_period` and `validation_period` as `TBD`. The project required a full intended research window before universe freeze, but had not fixed the start date, end date, train/validation split, or the status of the validation block after inspection.
+
+**New rule:** Phase 1 V0 experiments use:
+
+- research/training period: 1 January 2016 through 31 December 2022, inclusive;
+- validation period: 1 January 2023 through 19 August 2026, inclusive;
+- full V0 data-audit window: 1 January 2016 through 19 August 2026, inclusive.
+
+The 2023-2026 validation block is a one-time holdout for Phase 1 B001/B002/B003 evaluation. Once inspected for strategy performance, it is contaminated for future selection or parameter tuning. Later research that needs fresh unseen evidence must use newly accumulated post-19-August-2026 market data as the next frontier, or explicitly label any reuse of the 2023-2026 block as in-sample/previously inspected.
+
+**Reason:** The split is fixed before full-window data download, universe selection, or any B001/B002/B003 result exists. The 2016 start is chosen because NSE's trading-holiday API has been verified to return historical CM holiday data for 2011 through 2026, including 2016, making an independently derived calendar feasible from the chosen start. The project deliberately does not extend the initial V0 window back to 2011 because the current parser and corpus evidence are built around modern CM-UDiFF files and the pre-UDiFF historical-source bridge has not yet been specified or validated. Starting in 2016 still gives seven complete calendar years for data validation, universe construction, and baseline development, while avoiding an even larger legacy-data commitment before the source bridge is designed. The 2023-2026 validation period gives a materially later multi-year block while ending at the already established 19-August-2026 data-audit cutoff. These dates are not chosen from observed strategy performance; no such results exist.
+
+**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015, universe construction, data validation, and all downstream Phase 1 reports.
+
+**Rerun required:** No. No full-window data build, universe freeze, or strategy run exists yet.
