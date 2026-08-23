@@ -550,19 +550,27 @@ A spectacular strategy result obtained before this validation is not trustworthy
 
 ---
 
-## 9. Task 3 — NSE UDiFF Loader
+## 9. Task 3 — NSE daily-market loaders
 
 Create:
 
 ```text
 src/nse_quant/data/nse_udiff.py
+src/nse_quant/data/nse_legacy_bhavcopy.py
 ```
 
 ### 9.1 Source
 
 Use NSE:
 
-**CM-UDiFF Common Bhavcopy Final**
+```text
+2016-01-01 through 2024-07-05: Full Bhavcopy and Security Deliverable data
+2024-07-08 through 2026-08-19: CM-UDiFF Common Bhavcopy Final
+```
+
+The legacy parser must not be implemented until real files from the pre-UDiFF
+window have been inspected and recorded in a validation artifact. Do not infer
+the legacy schema from UDiFF or from synthetic rows.
 
 ### 9.2 Raw storage
 
@@ -571,6 +579,7 @@ Raw downloads are immutable.
 Suggested path:
 
 ```text
+data/raw/nse/cm_full_bhavcopy/YYYY/MM/
 data/raw/nse/cm_udiff/YYYY/MM/
 ```
 

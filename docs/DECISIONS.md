@@ -512,3 +512,33 @@ The 2023-2026 validation block is a one-time holdout for Phase 1 B001/B002/B003 
 **Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015, universe construction, data validation, and all downstream Phase 1 reports.
 
 **Rerun required:** No. No full-window data build, universe freeze, or strategy run exists yet.
+
+---
+
+## D-031 — Historical market-data source bridge
+
+**Date:** 23 August 2026
+**Status:** Accepted
+
+**Old rule:** Phase 0 and Phase 1 described NSE CM-UDiFF Common Bhavcopy Final as the primary raw daily-market source, but D-030 fixed a V0 data-audit window beginning on 1 January 2016. UDiFF is the current format and does not by itself cover the whole pre-2024 research window.
+
+**New rule:** V0 uses two official NSE daily-market source families normalized into one canonical daily-bar schema:
+
+- 1 January 2016 through 5 July 2024: NSE `Full Bhavcopy and Security Deliverable data`;
+- 8 July 2024 through 19 August 2026: NSE `CM-UDiFF Common Bhavcopy Final`.
+
+The 6-7 July 2024 weekend has no expected normal cash-market session. If a later checked-in calendar identifies a special session on either date, that date must be handled by an explicit source note before dataset construction.
+
+Both source families must preserve raw files unchanged and normalize into the same processed fields: trade date, source format, symbol, security series, optional ISIN, raw OHLC, previous close, raw traded volume, raw traded value, and any source-specific audit fields. For CM-UDiFF, `TtlTrfVal` remains authoritative. For the legacy full-bhavcopy source, raw traded value is provisionally `TURNOVER_LACS * 100000`, pending real-file validation before parser implementation.
+
+The legacy source is expected to lack ISIN. Therefore the ISIN-continuity guard from D-019 applies only on dates whose normalized rows contain ISIN. Pre-UDiFF missing-corporate-action detection relies on the NSE corporate-action file, full-window corporate-action scan, raw-versus-adjusted continuity checks, and explicit unsupported-action exclusion.
+
+Before implementing the legacy parser, inspect real legacy files from at least 2016, 2019, 2020, 2022, and July 2024. Record headers, row counts, series counts, traded-value units, no-trade rows, and row-quality failures in a validation artifact. Do not infer the legacy schema from UDiFF or from invented rows.
+
+**Evidence:** NSE's All Reports page lists `CM-UDiFF Common Bhavcopy Final (zip)` as the current CM bhavcopy source and states that older `CM - Bhavcopy(csv)` and `CM - Common Bhavcopy (csv)` reports were discontinued with effect from 8 July 2024. The same reports page lists `Full Bhavcopy and Security Deliverable data`, which is the selected official NSE bridge source for pre-UDiFF daily cash-equity bars.
+
+**Reason:** D-030 made the historical window concrete. Treating UDiFF as the only source would leave 2016 through early July 2024 undefined; silently choosing a legacy source during implementation would reintroduce an unregistered data decision. The full-bhavcopy bridge keeps the project on official NSE daily data, preserves traded value and delivery fields useful for liquidity validation, and forces real-file schema validation before code is written.
+
+**Affected experiments:** UDiFF loader, legacy daily-market loader, data validation, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
+
+**Rerun required:** No. No full-window data build, universe freeze, or strategy run exists yet.
