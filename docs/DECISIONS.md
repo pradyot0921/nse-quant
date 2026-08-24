@@ -586,3 +586,29 @@ Raw-file auditing remains calendar-driven: expected archives come from the check
 **Affected experiments:** UDiff acquisition, legacy acquisition, data validation, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
 
 **Rerun required:** No. No full-window data build, universe freeze, or strategy run exists yet.
+
+---
+
+## D-034 — Legacy and UDiFF normalize through one canonical equity bar
+
+**Date:** 24 August 2026
+**Status:** Accepted
+
+**Old rule:** D-031 required both source families to normalize into one processed daily-bar schema, but the code still exposed separate `LegacyBhavcopyEquityBar` and `UDiffEquityBar` dataclasses with no shared canonical representation. The July 2024 source bridge had not been validated through same-date real-source comparison.
+
+**New rule:** V0 normalizes both NSE `CM - Bhavcopy(csv)` legacy rows and NSE `CM-UDiFF Common Bhavcopy Final` rows into `CanonicalEquityBar`, retaining `source_format` for audit while using the same research fields: trade date, symbol, ISIN, series, OHLC, previous close, last price, traded volume, traded value, and transaction count.
+
+The source bridge remains:
+
+- legacy CM bhavcopy through 5 July 2024;
+- CM-UDiFF from 8 July 2024 onward.
+
+Before processed dataset construction, the July 2024 source seam must have a committed evidence artifact comparing real legacy and UDiff rows where both source families are available.
+
+**Evidence:** `docs/validation/LEGACY_UDIFF_SEAM_VALIDATION_V0.md` checked NSE sessions from 1 July 2024 through 12 July 2024. CM-UDiFF archives were available for all 10 checked sessions. Legacy CM bhavcopy archives were available for 1-5 July 2024 and absent from 8 July 2024 onward. On the five same-date overlap sessions, every common EQ symbol matched exactly after canonical normalization: 1,914 symbols on 1 July, 1,914 on 2 July, 1,911 on 3 July, 1,910 on 4 July, and 1,906 on 5 July. Across the bridge, 8 July 2024 CM-UDiFF `previous_close` matched 5 July 2024 legacy CM bhavcopy `close` for all 1,903 common symbols.
+
+**Reason:** The validation period contains a source-format boundary. A subtle field mapping, rounding, traded-value unit, ISIN, or volume mismatch at that boundary would contaminate both universe construction and validation-period results while looking like ordinary market data. Same-date real-source overlap gives stronger evidence than synthetic tests because it proves both parsers map production NSE rows into identical canonical bars.
+
+**Affected experiments:** Legacy parser, UDiff parser, data validation, processed dataset construction, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
+
+**Rerun required:** No. No processed full-window dataset, universe freeze, or strategy run exists yet.

@@ -97,6 +97,7 @@ def test_parse_legacy_bhavcopy_csv_without_network(tmp_path):
     assert bhavcopy.trade_date == date(2025, 10, 31)
     assert bhavcopy.bars[0].symbol == "BEML"
 
+
 def test_parse_legacy_bhavcopy_accepts_two_digit_year_timestamp(tmp_path):
     source = tmp_path / "cm13JUL2020bhav.csv"
     write_csv(source, [row(TIMESTAMP="13-Jul-20")])
@@ -105,6 +106,7 @@ def test_parse_legacy_bhavcopy_accepts_two_digit_year_timestamp(tmp_path):
 
     assert bhavcopy.trade_date == date(2020, 7, 13)
     assert bhavcopy.bars[0].trade_date == date(2020, 7, 13)
+
 
 def test_parse_legacy_bhavcopy_accepts_header_without_trailing_blank_column(tmp_path):
     source = tmp_path / "cm10JUL2017bhav.csv"
@@ -116,6 +118,7 @@ def test_parse_legacy_bhavcopy_accepts_header_without_trailing_blank_column(tmp_
     assert bhavcopy.trade_date == date(2017, 7, 10)
     assert bhavcopy.bars[0].trade_date == date(2017, 7, 10)
     assert bhavcopy.rejected_rows == ()
+
 
 def test_legacy_filename_date_parser_accepts_archive_and_csv_names():
     assert date_from_cm_bhavcopy_filename("cm04JAN2016bhav.csv.zip") == date(
