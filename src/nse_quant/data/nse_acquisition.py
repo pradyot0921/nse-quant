@@ -24,8 +24,9 @@ CM_UDIFF_ARCHIVE_URL_TEMPLATE = (
 SESSION_CALENDAR_COLUMNS = ("date", "session_type", "source")
 COMPACT_SESSION_CALENDAR_COLUMNS = ("date", "session_type")
 DEFAULT_USER_AGENT = (
-    "Mozilla/5.0 (compatible; nse-quant-research/0.1; "
-    "+https://github.com/pradyot0921/nse-quant)"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/126.0.0.0 Safari/537.36"
 )
 
 
