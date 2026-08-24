@@ -14,6 +14,7 @@ from nse_quant.data.nse_legacy_acquisition import (
     date_from_cm_bhavcopy_filename,
     download_cm_bhavcopy_file,
 )
+from nse_quant.data import nse_legacy_acquisition
 
 
 def zip_bytes():
@@ -235,3 +236,35 @@ def test_download_cm_bhavcopy_file_does_not_retry_archive_not_found(tmp_path):
         )
 
     assert len(attempts) == 1
+
+
+def test_cm_bhavcopy_fetch_uses_browser_style_headers(monkeypatch):
+    captured = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return b"content"
+
+    def fake_urlopen(request, timeout):
+        captured["headers"] = dict(request.header_items())
+        captured["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr(nse_legacy_acquisition, "urlopen", fake_urlopen)
+
+    assert (
+        nse_legacy_acquisition._fetch_url("https://example.test/archive.zip")
+        == b"content"
+    )
+
+    headers = captured["headers"]
+    assert "Windows NT 10.0" in headers["User-agent"]
+    assert "Chrome/" in headers["User-agent"]
+    assert headers["Referer"] == "https://www.nseindia.com/all-reports"
+    assert captured["timeout"] == 60

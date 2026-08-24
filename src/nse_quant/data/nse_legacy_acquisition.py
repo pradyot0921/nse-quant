@@ -26,8 +26,9 @@ LEGACY_CM_BHAVCOPY_ARCHIVE_URL_TEMPLATE = (
     "{yyyy}/{mmm}/cm{dd}{mmm}{yyyy}bhav.csv.zip"
 )
 DEFAULT_USER_AGENT = (
-    "Mozilla/5.0 (compatible; nse-quant-research/0.1; "
-    "+https://github.com/pradyot0921/nse-quant)"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/126.0.0.0 Safari/537.36"
 )
 MONTH_ABBREVIATIONS = (
     "JAN",

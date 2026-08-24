@@ -20,6 +20,7 @@ from nse_quant.data.nse_acquisition import (
     load_session_calendar,
     research_sessions,
 )
+from nse_quant.data import nse_acquisition
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -409,3 +410,32 @@ def test_download_cm_udiff_file_does_not_retry_archive_not_found(tmp_path):
         )
 
     assert len(attempts) == 1
+
+
+def test_cm_udiff_fetch_uses_browser_style_headers(monkeypatch):
+    captured = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return b"content"
+
+    def fake_urlopen(request, timeout):
+        captured["headers"] = dict(request.header_items())
+        captured["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setattr(nse_acquisition, "urlopen", fake_urlopen)
+
+    assert nse_acquisition._fetch_url("https://example.test/archive.zip") == b"content"
+
+    headers = captured["headers"]
+    assert "Windows NT 10.0" in headers["User-agent"]
+    assert "Chrome/" in headers["User-agent"]
+    assert headers["Referer"] == "https://www.nseindia.com/all-reports"
+    assert captured["timeout"] == 60
