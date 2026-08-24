@@ -398,7 +398,12 @@ def _factor(amount: Decimal) -> Decimal:
 
 
 def _has_split_token(value: str) -> bool:
-    return "split" in value or "sub-division" in value or "sub division" in value
+    return (
+        "split" in value
+        or "splt" in value
+        or "sub-division" in value
+        or "sub division" in value
+    )
 
 
 def _has_unsupported_bonus_instrument(value: str) -> bool:
@@ -420,6 +425,8 @@ def _has_unsupported_bonus_instrument(value: str) -> bool:
     next_token = match.group(1)
     if next_token is None:
         return False
+    if ":" in next_token or next_token.strip("-/") == "":
+        return False
     if re.fullmatch(r"\d+(?:\.\d+)?:\d+(?:\.\d+)?", next_token):
         return False
     return next_token not in {"issue", "shares", "share", "equity", "ratio", "record"}
@@ -427,15 +434,19 @@ def _has_unsupported_bonus_instrument(value: str) -> bool:
 
 def _has_ignored_noop_event(value: str) -> bool:
     ignored_patterns = [
-        r"\bdividend\b",
+        r"dividend",
         r"\bagm\b",
         r"\begm\b",
         r"\bannual general meeting\b",
         r"\bextraordinary general meeting\b",
+        r"\bextra\s*-?\s*ordinary\s+general\s+meeting\b",
+        r"\bgeneral\s*meeting\b",
+        r"\bbook\s+clos(?:ure|ing)\b",
+        r"\bannual\s+closing\b",
         r"\bboard meeting\b",
         r"\bchange(?:d)? in name\b",
         r"\bname change\b",
-        r"\bbuy back\b",
+        r"\bbuy\s*-?\s*back\b",
     ]
     return any(re.search(pattern, value) is not None for pattern in ignored_patterns)
 
@@ -489,7 +500,10 @@ def _parse_bonus_ratio(value: str) -> tuple[Decimal, Decimal] | None:
 def _parse_split_face_values(value: str) -> tuple[Decimal, Decimal] | None:
     money = r"(?:rs\.?|re\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:/-)?"
     per_share = r"(?:\s+per\s+share)?"
-    match = re.search(rf"from\s+{money}{per_share}\s+(?:to|into)\s+{money}{per_share}", value)
+    match = re.search(
+        rf"(?:from|frm)\s+{money}{per_share}\s+(?:to|into)\s+{money}{per_share}",
+        value,
+    )
     if match is None:
         return None
 
