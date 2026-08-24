@@ -650,3 +650,24 @@ Special sessions remain part of raw-file auditing. They are excluded from emitte
 **Affected experiments:** Corporate-action validation, adjusted OHLCV construction, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
 
 **Rerun required:** Completed in `docs/validation/CORPORATE_ACTION_FULL_WINDOW_SCAN_V0.md`. No universe freeze or strategy run exists yet.
+
+---
+
+## D-037 — V0 universe thresholds before selection
+
+**Date:** 24 August 2026
+**Status:** Accepted
+
+**Old rule:** V0 required a mechanically selected 20-stock liquid large-cap universe before B001, but the exact liquidity, history, missing-bar, and tie-break thresholds were still pending.
+
+**New rule:** The V0 candidate set is the Nifty 100 constituent list as of the universe freeze date. Candidates are filtered mechanically using `universes/selection_rule_v0.md`: EQ series only; no `UNSUPPORTED` corporate action in the full 2016-01-01 through 2026-08-19 window; first valid ordinary-session EQ bar no later than 2016-01-29; valid ordinary-session EQ bar on 2026-08-19; at least 98% valid-bar coverage in both the research and validation periods; no more than 5 consecutive missing ordinary-session bars; and research-period median daily raw traded value of at least INR 250,000,000. Surviving candidates are ranked by research-period median daily raw traded value, then valid-bar count, then alphabetical symbol. The top 20 are selected. If fewer than 20 candidates pass, universe construction halts until a new decision is recorded.
+
+Missing bars that survive the universe-level tolerance are pre-registered for future backtests: no new entry or rebalance execution on a missing-bar session; if already held, mark using the most recent valid close and do not trade that symbol until the next valid bar; halt if the gap exceeds 5 consecutive ordinary sessions.
+
+**Reason:** These thresholds are chosen before running universe selection or seeing B001 results. The INR 250,000,000 median raw traded-value floor keeps V0 focused on genuinely liquid large caps while remaining independent of strategy performance. The 98% coverage rule and 5-session gap cap avoid disqualifying a candidate for a single benign halt while still excluding materially discontinuous histories. Ranking uses research-period liquidity only so the validation period is not used to choose the 20 symbols, while full-window data-quality and corporate-action filters prevent later validation runs from failing on known unsupported events.
+
+**Bias note:** V0 remains survivorship-biased and not point-in-time because current Nifty 100 constituents are used. The unsupported-corporate-action filter and continuous-history filter add an explicit bias toward stable, continuously listed large caps. V0 reports must disclose all three labels.
+
+**Affected experiments:** Universe construction, processed dataset construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
+
+**Rerun required:** No. No universe freeze or strategy run exists yet.
