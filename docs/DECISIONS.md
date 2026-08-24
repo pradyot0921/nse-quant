@@ -612,3 +612,22 @@ Before processed dataset construction, the July 2024 source seam must have a com
 **Affected experiments:** Legacy parser, UDiff parser, data validation, processed dataset construction, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
 
 **Rerun required:** No. No processed full-window dataset, universe freeze, or strategy run exists yet.
+
+---
+
+## D-035 — Market-data validation emits canonical bars and explicit problems
+
+**Date:** 24 August 2026
+**Status:** Accepted
+
+**Old rule:** Raw-file acquisition, source-specific parsing, and canonical bar normalization existed, but there was no offline orchestration layer that combined the checked-in calendar, expected raw files, parser failures, row rejections, and canonical bars into one auditable report.
+
+**New rule:** V0 market-data validation is an offline step over already-saved raw archives. It must not download files or freeze the universe. For every checked-in expected session, it audits whether the registered raw archive exists and reports unexpected raw archives separately. For research-bar construction it parses only sessions eligible under D-029 by default, normalizes valid EQ rows into `CanonicalEquityBar`, preserves non-EQ series counts, and records missing files, file-level parser failures, and row-level EQ rejections as explicit report fields.
+
+Special sessions remain part of raw-file auditing. They are excluded from emitted research bars unless validation is run with an explicit opt-in.
+
+**Reason:** The dataset builder needs one deterministic boundary between raw archives and processed daily bars. A missing file, malformed file, or rejected row must not disappear inside a parser loop, and extra raw archives from validation work, overlap scans, or special sessions must not silently enter the research dataset. Separating validation from acquisition keeps the raw-data evidence reproducible without network access.
+
+**Affected experiments:** Raw market-data validation, processed dataset construction, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
+
+**Rerun required:** No. No processed full-window dataset, universe freeze, or strategy run exists yet.
