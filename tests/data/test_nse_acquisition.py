@@ -320,6 +320,40 @@ def test_download_cm_udiff_file_retries_transient_errors(tmp_path):
     assert len(attempts) == 3
 
 
+def test_download_cm_udiff_file_retries_timeout_errors(tmp_path):
+    attempts = []
+
+    def fetch(url):
+        attempts.append(url)
+        if len(attempts) < 2:
+            raise TimeoutError("read operation timed out")
+        return zip_bytes()
+
+    path = download_cm_udiff_file(
+        date(2025, 10, 31),
+        tmp_path,
+        fetch_bytes=fetch,
+        max_retries=1,
+        retry_delay_seconds=0,
+    )
+
+    assert path.exists()
+    assert len(attempts) == 2
+
+
+def test_download_cm_udiff_file_wraps_exhausted_timeout(tmp_path):
+    with pytest.raises(UDiffDownloadRetryableError, match="timed out downloading"):
+        download_cm_udiff_file(
+            date(2025, 10, 31),
+            tmp_path,
+            fetch_bytes=lambda url: (_ for _ in ()).throw(
+                TimeoutError("read operation timed out")
+            ),
+            max_retries=0,
+            retry_delay_seconds=0,
+        )
+
+
 def test_download_cm_udiff_file_does_not_retry_archive_not_found(tmp_path):
     attempts = []
 
