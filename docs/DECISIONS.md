@@ -671,3 +671,22 @@ Missing bars that survive the universe-level tolerance are pre-registered for fu
 **Affected experiments:** Universe construction, processed dataset construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
 
 **Rerun required:** No. No universe freeze or strategy run exists yet.
+
+---
+
+## D-038 — Candidate-level dividend typo records are ignored
+
+**Date:** 24 August 2026
+**Status:** Accepted
+
+**Old rule:** The corporate-action parser ignored correctly spelled `Dividend` records but still quarantined some NSE typo or abbreviation variants such as `Int Div`, `Dividned`, and `Int Div Rs ... Per Sh`.
+
+**New rule:** V0 treats observed dividend typo and abbreviation variants as `IGNORED` no-price-adjustment records when they clearly describe cash dividends and contain no split, bonus, rights, scheme, capital-reduction, or demerger action.
+
+**Evidence:** The first V0 universe-freeze run excluded otherwise eligible current Nifty 100 candidates solely because of benign dividend spelling/abbreviation records: HCLTECH `Int Div- 2 Per Share (Purpose Revised)`, NESTLEIND `Interim Dividned - Rs 135 Per Share`, and TCS `Int Div Rs 4 Per Sh`.
+
+**Reason:** Cash dividends do not mechanically multiply share count or create an OHLCV split/bonus adjustment in V0. Treating obvious dividend typo records as unsupported would add needless universe exclusions while providing no extra protection against price-series corruption. The parser still quarantines rights, schemes, demergers, capital reductions, consolidations, combined split-plus-bonus records, and non-equity bonus instruments.
+
+**Affected experiments:** Corporate-action validation, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
+
+**Rerun required:** Completed in `docs/validation/NIFTY100_V0_UNIVERSE_FREEZE.md`. No strategy run exists yet.

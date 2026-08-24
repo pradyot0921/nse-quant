@@ -1,1 +1,21 @@
-symbol,company_name,selection_date,selection_rule_version,notes
+symbol,company_name,industry,selection_date,selection_rule_version,median_daily_raw_traded_value_inr,research_valid_bar_coverage,validation_valid_bar_coverage,full_max_consecutive_missing_sessions,notes
+ICICIBANK,ICICI Bank Ltd.,Financial Services,2026-08-24,nifty100_v0_20_d037,7227980758.05,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+SBIN,State Bank of India,Financial Services,2026-08-24,nifty100_v0_20_d037,6647390047.90,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+HDFCBANK,HDFC Bank Ltd.,Financial Services,2026-08-24,nifty100_v0_20_d037,6469013697.58,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+INFY,Infosys Ltd.,Information Technology,2026-08-24,nifty100_v0_20_d037,5809596955.08,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+AXISBANK,Axis Bank Ltd.,Financial Services,2026-08-24,nifty100_v0_20_d037,5728258934.30,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+TCS,Tata Consultancy Services Ltd.,Information Technology,2026-08-24,nifty100_v0_20_d037,5299560325.05,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+MARUTI,Maruti Suzuki India Ltd.,Automobile and Auto Components,2026-08-24,nifty100_v0_20_d037,4661449108.40,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+KOTAKBANK,Kotak Mahindra Bank Ltd.,Financial Services,2026-08-24,nifty100_v0_20_d037,3303789364.62,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+LT,Larsen & Toubro Ltd.,Construction,2026-08-24,nifty100_v0_20_d037,3091745803.98,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+SUNPHARMA,Sun Pharmaceutical Industries Ltd.,Healthcare,2026-08-24,nifty100_v0_20_d037,2586890243.10,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+HINDALCO,Hindalco Industries Ltd.,Metals & Mining,2026-08-24,nifty100_v0_20_d037,2207593872.28,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+HCLTECH,HCL Technologies Ltd.,Information Technology,2026-08-24,nifty100_v0_20_d037,2186455364.85,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+M&M,Mahindra & Mahindra Ltd.,Automobile and Auto Components,2026-08-24,nifty100_v0_20_d037,2095053528.90,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+TITAN,Titan Company Ltd.,Consumer Durables,2026-08-24,nifty100_v0_20_d037,2034468147.15,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+TECHM,Tech Mahindra Ltd.,Information Technology,2026-08-24,nifty100_v0_20_d037,2013094660.25,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+BANKBARODA,Bank of Baroda,Financial Services,2026-08-24,nifty100_v0_20_d037,2001406197.55,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+ASIANPAINT,Asian Paints Ltd.,Consumer Durables,2026-08-24,nifty100_v0_20_d037,1950224613.62,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+JINDALSTEL,Jindal Steel Ltd.,Metals & Mining,2026-08-24,nifty100_v0_20_d037,1922095942.12,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+BAJAJFINSV,Bajaj Finserv Ltd.,Financial Services,2026-08-24,nifty100_v0_20_d037,1809804256.78,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution
+BPCL,Bharat Petroleum Corporation Ltd.,Oil Gas & Consumable Fuels,2026-08-24,nifty100_v0_20_d037,1774271151.92,1.000000,1.000000,0,mechanically selected by D-037 before B001 execution

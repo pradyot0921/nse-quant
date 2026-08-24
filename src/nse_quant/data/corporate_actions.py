@@ -435,6 +435,8 @@ def _has_unsupported_bonus_instrument(value: str) -> bool:
 def _has_ignored_noop_event(value: str) -> bool:
     ignored_patterns = [
         r"dividend",
+        r"\bdividned\b",
+        r"\bdiv\b",
         r"\bagm\b",
         r"\begm\b",
         r"\bannual general meeting\b",
