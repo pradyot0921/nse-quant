@@ -252,6 +252,9 @@ def test_known_noop_meeting_is_ignored():
         "Annual Closing",
         "Buyback",
         "Buyback Of Shares",
+        "Int Div- 2 Per Share (Purpose Revised)",
+        "Interim Dividned - Rs 135 Per Share",
+        "Int Div Rs 4 Per Sh",
     ],
 )
 def test_real_nse_noop_corpus_purposes_are_ignored(purpose):
