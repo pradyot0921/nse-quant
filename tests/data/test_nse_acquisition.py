@@ -195,7 +195,7 @@ def test_committed_full_window_calendar_contains_expected_special_sessions():
         if session.session_type == "SPECIAL"
     }
 
-    assert len(sessions) == 2631
+    assert len(sessions) == 2634
     assert special_dates == {
         date(2016, 10, 30),
         date(2017, 10, 19),
@@ -206,6 +206,9 @@ def test_committed_full_window_calendar_contains_expected_special_sessions():
         date(2021, 11, 4),
         date(2022, 10, 24),
         date(2023, 11, 12),
+        date(2024, 1, 20),
+        date(2024, 3, 2),
+        date(2024, 5, 18),
         date(2024, 11, 1),
         date(2025, 2, 1),
         date(2025, 10, 21),

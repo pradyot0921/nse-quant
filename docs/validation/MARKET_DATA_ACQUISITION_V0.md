@@ -11,7 +11,7 @@ batch layer.
 
 | Metric | Count |
 | --- | ---: |
-| Records acquired or reused | 2631 |
+| Records acquired or reused | 2634 |
 | Missing archives | 0 |
 | Failed archives | 0 |
 
@@ -19,13 +19,14 @@ batch layer.
 
 | Source | Count |
 | --- | ---: |
-| cm_udiff | 526 |
+| cm_udiff | 529 |
 | legacy_cm_bhavcopy | 2105 |
 
 ## Status Counts
 
 | Status | Count |
 | --- | ---: |
+| downloaded | 3 |
 | reused | 2631 |
 
 ## Missing Archives

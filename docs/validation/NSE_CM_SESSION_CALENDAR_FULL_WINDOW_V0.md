@@ -46,8 +46,8 @@ Each included special session has a matching NSE daily archive.
 | Window days | 3,884 |
 | NSE CM holidays inside window | 201 |
 | Normal sessions | 2,618 |
-| Special sessions | 13 |
-| Total checked-in sessions | 2,631 |
+| Special sessions | 16 |
+| Total checked-in sessions | 2,634 |
 
 ## Special Sessions
 
@@ -62,6 +62,9 @@ Each included special session has a matching NSE daily archive.
 | 2021-11-04 | Diwali Muhurat trading | 206 |
 | 2022-10-24 | Diwali Muhurat trading | 206 |
 | 2023-11-12 | Diwali Muhurat trading | 206 |
+| 2024-01-20 | Special Saturday trading session | 200 |
+| 2024-03-02 | Special live trading session with DR-site switchover | 200 |
+| 2024-05-18 | Special live trading session with DR-site switchover | 200 |
 | 2024-11-01 | Diwali Muhurat trading | 206 |
 | 2025-02-01 | Union Budget Saturday trading | 206 |
 | 2025-10-21 | Diwali Muhurat trading | 206 |
@@ -69,7 +72,9 @@ Each included special session has a matching NSE daily archive.
 
 The archive probe used one-byte range requests against the registered source
 family for each date: legacy `CM - Bhavcopy(csv)` through 5 July 2024 and
-CM-UDiFF from 8 July 2024 onward.
+CM-UDiFF from 8 July 2024 onward. The 2024-01-20, 2024-03-02, and 2024-05-18
+special sessions are explicit source exceptions: legacy archive URLs returned
+HTML, while CM-UDiFF archives existed and validated for those dates.
 
 ## Evidence Notes
 
@@ -91,6 +96,9 @@ References used during construction include:
 - 2018 Muhurat notice mirror: `https://www.cse-india.com/upload/cse_notice/Muhurat_Trading_Session_on_account_of_Diwali1.htm`
 - 2021 Muhurat report: `https://indianexpress.com/article/business/market/muhurat-trading-diwali-2021-samvat-2078-live-updates-stocks-shares-bse-sensex-nse-nifty-november-4-7607540/lite/`
 - 2022 Muhurat report: `https://indianexpress.com/article/business/market/diwali-muhurat-trading-2022-samvat-2079-live-updates-shares-bse-sensex-nse-nifty-october-24-8227782/`
+- 2024-01-20 special trading revision notice: `https://zerodha.com/marketintel/bulletin/369143/equity-and-fo-markets-open-on-january-20-2024`
+- 2024-03-02 DR special-session notice: `https://zerodha.com/marketintel/bulletin/371327/live-trading-session-on-saturday-march-02-2024`
+- 2024-05-18 DR special-session report: `https://www.business-standard.com/markets/news/nse-to-run-special-trading-session-on-may-18-with-disaster-recovery-switch-124050701155_1.html`
 - 2024 Muhurat notice: `https://zerodha.com/marketintel/bulletin/393613/muhurat-trading-session-on-account-of-diwali-november-2024`
 - 2020 Budget trading notice: `https://zerodha.com/marketintel/bulletin/242887/stock-market-to-remain-open-on-saturday-february-1st-2020`
 - 2025 Budget trading report: `https://www.moneycontrol.com/news/business/stocks/budget-2025-will-nifty-sensex-remain-open-for-trade-on-saturday-february-1-12922254.html`

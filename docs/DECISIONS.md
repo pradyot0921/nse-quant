@@ -716,6 +716,57 @@ ISIN continuity may be explained by an identifier-changing corporate action on e
 
 ---
 
+## D-041 — Nifty 100 TRI fetch and 2024 special-session calendar correction
+
+**Date:** 24 August 2026
+**Status:** Accepted
+
+**Old rule:** D-040 registered the official NSE Indices `Total returns Index Values`
+report for `NIFTY 100`, but the first implementation used the obsolete
+`/Backpage.aspx/getTotalReturnIndexString` endpoint and received HTML instead
+of TRI rows. The full-window NSE CM calendar also contained 13 explicit special
+sessions and omitted three 2024 Saturday sessions later exposed by the official
+benchmark series.
+
+**New rule:** V0 fetches the official Nifty 100 TRI rows from
+`/BackPage/getTotalReturnIndexString` using the page's `cinfo` JSON payload.
+The parser accepts the live direct JSON row list and the older wrapped `d`
+payload shape. `NTR_Value` may be `-` and is treated as unavailable, while
+`TotalReturnsIndex` remains mandatory and positive.
+
+The V0 session calendar adds 2024-01-20, 2024-03-02, and 2024-05-18 as explicit
+`SPECIAL` sessions. They are kept for raw-file auditing and benchmark
+date-alignment evidence but remain excluded from default research bars under
+D-029. These three pre-transition special sessions use CM-UDiFF archives,
+because the legacy CM bhavcopy archive URLs return HTML for those dates while
+the CM-UDiFF ZIP archives exist and validate.
+
+**Evidence:** The official Nifty 100 TRI fetch for 2016-01-01 through
+2026-08-19 returned 2,634 benchmark rows with zero missing ordinary research
+sessions and 16 extra dates. The extra dates are the 16 special sessions now
+recorded in the full-window calendar. UDiFF archive probes for 2024-01-20,
+2024-03-02, and 2024-05-18 returned ZIP archives; the corresponding legacy
+URLs returned HTML.
+
+**Reason:** Benchmark rows are an independent source of session evidence. Once
+they exposed special sessions missing from the raw-data calendar, keeping the
+old 13-session calendar would make acquisition auditing incomplete. Adding the
+sessions does not change B001/B002/B003 research bars because special sessions
+remain excluded by default, but it does preserve raw archive completeness and
+prevents official benchmark rows from being mislabelled as unexplained extras.
+
+**Affected experiments:** Session calendar, raw market-data acquisition,
+benchmark ingestion, processed dataset construction, B001, B001-S015, B002,
+B002-S015, B003, B003-S015, reporting, and all Phase 1 benchmark-relative
+checks.
+
+**Rerun required:** Rerun raw market-data acquisition and validation artifacts
+for the corrected calendar. The processed V0 dataset hash is not expected to
+change because ordinary research sessions are unchanged and special sessions
+are excluded by default. No strategy run exists yet.
+
+---
+
 ## D-040 — Official Nifty 100 TRI benchmark source
 
 **Date:** 24 August 2026

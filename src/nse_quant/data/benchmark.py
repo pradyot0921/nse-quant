@@ -17,7 +17,7 @@ from nse_quant.data.nse_acquisition import TradingSession, research_sessions
 NIFTY100_TRI_NAME = "NIFTY 100"
 NIFTY_INDICES_HISTORICAL_DATA_URL = "https://www.niftyindices.com/reports/historical-data"
 NIFTY_INDICES_TRI_ENDPOINT = (
-    "https://www.niftyindices.com/Backpage.aspx/getTotalReturnIndexString"
+    "https://www.niftyindices.com/BackPage/getTotalReturnIndexString"
 )
 DEFAULT_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -100,12 +100,15 @@ def parse_nifty_tri_response(
     except json.JSONDecodeError as exc:
         raise BenchmarkDataError("NSE Indices TRI response is not JSON") from exc
 
-    if "d" not in outer:
-        raise BenchmarkDataError("NSE Indices TRI response is missing field 'd'")
-    try:
-        rows = json.loads(outer["d"])
-    except (TypeError, json.JSONDecodeError) as exc:
-        raise BenchmarkDataError("NSE Indices TRI payload field 'd' is not JSON") from exc
+    if isinstance(outer, list):
+        rows = outer
+    elif isinstance(outer, dict) and "d" in outer:
+        try:
+            rows = json.loads(outer["d"])
+        except (TypeError, json.JSONDecodeError) as exc:
+            raise BenchmarkDataError("NSE Indices TRI payload field 'd' is not JSON") from exc
+    else:
+        raise BenchmarkDataError("NSE Indices TRI response is neither a row list nor field 'd'")
     if not isinstance(rows, list):
         raise BenchmarkDataError("NSE Indices TRI payload must be a list")
     if not rows:
@@ -220,6 +223,10 @@ def write_benchmark_validation_report(
             "dates are blocking because strategy NAV and benchmark drawdown must be",
             "computed over the identical evaluation period.",
             "",
+            "Extra benchmark dates are reported for audit. They are not blocking",
+            "by themselves when they correspond to special sessions excluded from",
+            "default V0 research bars under D-029.",
+            "",
         ]
     )
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -254,7 +261,9 @@ def _bar_from_row(
         index_name=expected_index_name,
         trade_date=_response_date(str(row.get("Date", "")).strip()),
         total_return_index=total_return_index,
-        net_total_return_index=None if raw_ntr == "" else _positive_decimal(raw_ntr, "NTR_Value"),
+        net_total_return_index=(
+            None if raw_ntr in {"", "-"} else _positive_decimal(raw_ntr, "NTR_Value")
+        ),
     )
 
 

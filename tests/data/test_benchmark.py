@@ -51,6 +51,27 @@ def test_parse_nifty_tri_response_decodes_double_json_and_sorts_ascending():
     assert bars[0].net_total_return_index == Decimal("990.25")
 
 
+def test_parse_nifty_tri_response_decodes_live_json_list_and_dash_ntr():
+    bars = parse_nifty_tri_response(
+        json.dumps(
+            [
+                row(
+                    **{
+                        "Index Name": "Nifty 100",
+                        "Date": "19 Aug 2026",
+                        "TotalReturnsIndex": "35013.74",
+                        "NTR_Value": "-",
+                    }
+                )
+            ]
+        )
+    )
+
+    assert bars[0].trade_date == date(2026, 8, 19)
+    assert bars[0].total_return_index == Decimal("35013.74")
+    assert bars[0].net_total_return_index is None
+
+
 def test_parse_nifty_tri_response_rejects_html_or_empty_payload():
     with pytest.raises(BenchmarkDataError, match="not JSON"):
         parse_nifty_tri_response("<html></html>")
