@@ -1,4 +1,5 @@
 from datetime import date
+from http.client import RemoteDisconnected
 import zipfile
 
 import pytest
@@ -174,6 +175,43 @@ def test_download_cm_bhavcopy_file_wraps_exhausted_timeout(tmp_path):
             tmp_path,
             fetch_bytes=lambda url: (_ for _ in ()).throw(
                 TimeoutError("read operation timed out")
+            ),
+            max_retries=0,
+            retry_delay_seconds=0,
+        )
+
+
+def test_download_cm_bhavcopy_file_retries_remote_disconnect(tmp_path):
+    attempts = []
+
+    def fetch(url):
+        attempts.append(url)
+        if len(attempts) < 2:
+            raise RemoteDisconnected("remote end closed connection without response")
+        return zip_bytes()
+
+    path = download_cm_bhavcopy_file(
+        date(2016, 1, 4),
+        tmp_path,
+        fetch_bytes=fetch,
+        max_retries=1,
+        retry_delay_seconds=0,
+    )
+
+    assert path.exists()
+    assert len(attempts) == 2
+
+
+def test_download_cm_bhavcopy_file_wraps_exhausted_remote_disconnect(tmp_path):
+    with pytest.raises(
+        LegacyBhavcopyDownloadRetryableError,
+        match="interrupted HTTP response",
+    ):
+        download_cm_bhavcopy_file(
+            date(2016, 1, 4),
+            tmp_path,
+            fetch_bytes=lambda url: (_ for _ in ()).throw(
+                RemoteDisconnected("remote end closed connection without response")
             ),
             max_retries=0,
             retry_delay_seconds=0,

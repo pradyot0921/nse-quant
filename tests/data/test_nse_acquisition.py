@@ -1,4 +1,5 @@
 from datetime import date
+from http.client import RemoteDisconnected
 from pathlib import Path
 import zipfile
 
@@ -348,6 +349,43 @@ def test_download_cm_udiff_file_wraps_exhausted_timeout(tmp_path):
             tmp_path,
             fetch_bytes=lambda url: (_ for _ in ()).throw(
                 TimeoutError("read operation timed out")
+            ),
+            max_retries=0,
+            retry_delay_seconds=0,
+        )
+
+
+def test_download_cm_udiff_file_retries_remote_disconnect(tmp_path):
+    attempts = []
+
+    def fetch(url):
+        attempts.append(url)
+        if len(attempts) < 2:
+            raise RemoteDisconnected("remote end closed connection without response")
+        return zip_bytes()
+
+    path = download_cm_udiff_file(
+        date(2025, 10, 31),
+        tmp_path,
+        fetch_bytes=fetch,
+        max_retries=1,
+        retry_delay_seconds=0,
+    )
+
+    assert path.exists()
+    assert len(attempts) == 2
+
+
+def test_download_cm_udiff_file_wraps_exhausted_remote_disconnect(tmp_path):
+    with pytest.raises(
+        UDiffDownloadRetryableError,
+        match="interrupted HTTP response",
+    ):
+        download_cm_udiff_file(
+            date(2025, 10, 31),
+            tmp_path,
+            fetch_bytes=lambda url: (_ for _ in ()).throw(
+                RemoteDisconnected("remote end closed connection without response")
             ),
             max_retries=0,
             retry_delay_seconds=0,
