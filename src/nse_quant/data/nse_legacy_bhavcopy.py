@@ -19,7 +19,7 @@ import zipfile
 from typing import Iterable
 
 
-EXPECTED_COLUMNS = (
+BASE_EXPECTED_COLUMNS = (
     "SYMBOL",
     "SERIES",
     "OPEN",
@@ -33,8 +33,10 @@ EXPECTED_COLUMNS = (
     "TIMESTAMP",
     "TOTALTRADES",
     "ISIN",
-    "",
 )
+
+EXPECTED_COLUMNS = BASE_EXPECTED_COLUMNS + ("",)
+ACCEPTED_COLUMNS = (BASE_EXPECTED_COLUMNS, EXPECTED_COLUMNS)
 
 DEFAULT_SERIES = "EQ"
 SOURCE_FORMAT = "NSE_CM_BHAVCOPY_CSV_ZIP"
@@ -206,14 +208,14 @@ def _read_csv_rows(lines: Iterable[str]) -> tuple[list[dict[str, str]], list[str
 
 
 def _validate_columns(fieldnames: list[str]) -> None:
-    if tuple(fieldnames) != EXPECTED_COLUMNS:
-        missing = sorted(set(EXPECTED_COLUMNS) - set(fieldnames))
-        extra = sorted(set(fieldnames) - set(EXPECTED_COLUMNS))
+    if tuple(fieldnames) not in ACCEPTED_COLUMNS:
+        accepted = set(EXPECTED_COLUMNS)
+        missing = sorted(accepted - set(fieldnames))
+        extra = sorted(set(fieldnames) - accepted)
         raise LegacyBhavcopySchemaError(
             "unexpected legacy CM bhavcopy columns; "
             f"missing={missing or 'none'} extra={extra or 'none'}"
         )
-
 
 def _parse_eq_row(
     row: dict[str, str],
@@ -222,7 +224,7 @@ def _parse_eq_row(
     row_number: int,
 ) -> LegacyBhavcopyEquityBar:
     prefix = f"{source_name}:{row_number}"
-    if row[""].strip():
+    if row.get("", "").strip():
         raise LegacyBhavcopyDataQualityError(
             f"{prefix}: trailing blank column must be empty"
         )
@@ -312,9 +314,13 @@ def _positive_int(value: str, *, field_name: str, prefix: str) -> int:
 
 
 def _parse_legacy_date(value: str, *, field_name: str) -> date:
-    try:
-        return datetime.strptime(value.strip().upper(), "%d-%b-%Y").date()
-    except ValueError:
-        raise LegacyBhavcopyDataQualityError(
-            f"{field_name} is not a DD-MMM-YYYY date: {value!r}"
-        ) from None
+    clean_value = value.strip().upper()
+    for date_format in ("%d-%b-%Y", "%d-%b-%y"):
+        try:
+            return datetime.strptime(clean_value, date_format).date()
+        except ValueError:
+            continue
+
+    raise LegacyBhavcopyDataQualityError(
+        f"{field_name} is not a DD-MMM-YYYY or DD-MMM-YY date: {value!r}"
+    )
