@@ -322,6 +322,12 @@ def _fetch_with_retries(
     for attempt in range(1, attempts + 1):
         try:
             return fetcher(url)
+        except TimeoutError as exc:
+            if attempt == attempts:
+                raise UDiffDownloadRetryableError(
+                    f"timed out downloading {url}: {exc}"
+                ) from exc
+            time.sleep(retry_delay_seconds)
         except UDiffArchiveNotFoundError:
             raise
         except UDiffDownloadRetryableError:
