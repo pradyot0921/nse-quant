@@ -33,6 +33,13 @@ LEGACY_CM_BHAVCOPY = "legacy_cm_bhavcopy"
 CM_UDIFF = "cm_udiff"
 LEGACY_LAST_SESSION = date(2024, 7, 5)
 UDIFF_FIRST_SESSION = date(2024, 7, 8)
+PRE_TRANSITION_UDIFF_SPECIAL_SESSIONS = frozenset(
+    {
+        date(2024, 1, 20),
+        date(2024, 3, 2),
+        date(2024, 5, 18),
+    }
+)
 
 
 class MarketDataAcquisitionError(RuntimeError):
@@ -72,6 +79,8 @@ class MarketDataRawFileAudit:
 def market_data_source_for_session(session_date: date) -> str:
     """Return the registered V0 source family for one trading session."""
 
+    if session_date in PRE_TRANSITION_UDIFF_SPECIAL_SESSIONS:
+        return CM_UDIFF
     if session_date <= LEGACY_LAST_SESSION:
         return LEGACY_CM_BHAVCOPY
     if session_date >= UDIFF_FIRST_SESSION:

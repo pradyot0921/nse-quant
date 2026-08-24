@@ -42,6 +42,9 @@ def session(session_date):
 def test_market_data_source_bridge_routes_legacy_and_udiff_dates():
     assert market_data_source_for_session(date(2024, 7, 5)) == LEGACY_CM_BHAVCOPY
     assert market_data_source_for_session(date(2024, 7, 8)) == CM_UDIFF
+    assert market_data_source_for_session(date(2024, 1, 20)) == CM_UDIFF
+    assert market_data_source_for_session(date(2024, 3, 2)) == CM_UDIFF
+    assert market_data_source_for_session(date(2024, 5, 18)) == CM_UDIFF
 
     with pytest.raises(MarketDataAcquisitionError, match="transition gap"):
         market_data_source_for_session(date(2024, 7, 6))

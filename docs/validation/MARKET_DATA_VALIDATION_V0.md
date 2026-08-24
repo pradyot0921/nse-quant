@@ -6,11 +6,11 @@
 
 | Metric | Count |
 | --- | ---: |
-| Calendar sessions checked | 2631 |
+| Calendar sessions checked | 2634 |
 | Research sessions parsed/attempted | 2618 |
 | Parsed session files | 2618 |
 | Missing expected raw files | 0 |
-| Unexpected raw files | 5 |
+| Unexpected raw files | 0 |
 | File-level parser failures | 0 |
 | Row-level rejections | 0 |
 | Canonical bars emitted | 4480763 |
@@ -2651,13 +2651,7 @@ None.
 
 ## Unexpected Raw Files
 
-| Date | Source | Path | Reason |
-| --- | --- | --- | --- |
-| 2024-07-01 | cm_udiff | `nse\cm_udiff\2024\07\BhavCopy_NSE_CM_0_0_0_20240701_F_0000.csv.zip` | `raw archive is not expected` |
-| 2024-07-02 | cm_udiff | `nse\cm_udiff\2024\07\BhavCopy_NSE_CM_0_0_0_20240702_F_0000.csv.zip` | `raw archive is not expected` |
-| 2024-07-03 | cm_udiff | `nse\cm_udiff\2024\07\BhavCopy_NSE_CM_0_0_0_20240703_F_0000.csv.zip` | `raw archive is not expected` |
-| 2024-07-04 | cm_udiff | `nse\cm_udiff\2024\07\BhavCopy_NSE_CM_0_0_0_20240704_F_0000.csv.zip` | `raw archive is not expected` |
-| 2024-07-05 | cm_udiff | `nse\cm_udiff\2024\07\BhavCopy_NSE_CM_0_0_0_20240705_F_0000.csv.zip` | `raw archive is not expected` |
+None.
 
 ## File-Level Parser Failures
 
