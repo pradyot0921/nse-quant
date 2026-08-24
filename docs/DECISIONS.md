@@ -690,3 +690,26 @@ Missing bars that survive the universe-level tolerance are pre-registered for fu
 **Affected experiments:** Corporate-action validation, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
 
 **Rerun required:** Completed in `docs/validation/NIFTY100_V0_UNIVERSE_FREEZE.md`. No strategy run exists yet.
+
+---
+
+## D-039 — Processed V0 dataset is a local artifact with a committed manifest
+
+**Date:** 24 August 2026
+**Status:** Accepted
+
+**Old rule:** Raw market-data validation, corporate-action validation, and the frozen V0 universe existed, but there was no single processed dataset build step that combined them into adjusted OHLCV rows for backtesting.
+
+**New rule:** The V0 processed dataset is built only from checked raw archives, the checked session calendar, the frozen `universes/nifty100_v0_20.csv`, and the saved full-window corporate-action endpoint rows. The builder must validate raw market data first, filter to the frozen 20 symbols, reject any unsupported corporate action for those symbols, require one valid ordinary-session bar per frozen symbol per research session, apply split/bonus backward-adjustment factors, and write a deterministic local CSV under `data/processed/`.
+
+The processed CSV remains untracked because it is derived data. Each successful build must commit a manifest under `docs/validation/` containing the dataset version, row counts, source-format counts, applied corporate actions, per-symbol row counts, and a SHA-256 hash of the local processed CSV.
+
+ISIN continuity may be explained by an identifier-changing corporate action on either the action ex-date or record date. The first processed build exposed a real selected-universe case: BAJAJFINSV has split and bonus records with ex-date `2022-09-13` and record date `2022-09-14`, while the market-data ISIN transition appears on `2022-09-14`.
+
+**Evidence:** `docs/validation/PROCESSED_DATASET_V0.md` records the first frozen-universe processed build: 20 symbols, 2,618 ordinary full-window sessions, 52,360 processed bars, 0 market-data missing files, 0 file-level parser failures, 0 row-level rejections, 362 selected-symbol corporate actions, 14 supported split/bonus adjustments, and processed CSV SHA-256 `74f25a13116f5658201870ee6ae7c35ac5d27153ccbf3b65909e078355f75b4e`.
+
+**Reason:** Backtests need one canonical adjusted OHLCV input instead of re-implementing validation, filtering, and adjustment logic inside strategy code. Keeping the large derived CSV out of git while committing a manifest preserves reproducibility without storing generated data in version control. The BAJAJFINSV record-date finding prevents a real split/bonus event from being falsely treated as a missing corporate action.
+
+**Affected experiments:** Processed dataset construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, benchmark comparison, and all downstream Phase 1 reports.
+
+**Rerun required:** No strategy run exists yet.

@@ -301,13 +301,9 @@ def validate_isin_continuity(
     bars: Iterable[OHLCVBar],
     actions: Iterable[ParsedCorporateAction],
 ) -> None:
-    """Raise when an ISIN change has no same-date corporate-action record."""
+    """Raise when an ISIN change has no matching identifier-action record."""
 
-    action_index = {
-        (action.symbol, action.ex_date)
-        for action in actions
-        if _can_explain_isin_change(action)
-    }
+    action_index = _isin_explaining_action_dates(actions)
     previous_by_symbol: dict[str, OHLCVBar] = {}
     for bar in sorted(bars, key=lambda item: (item.symbol, item.bar_date)):
         previous = previous_by_symbol.get(bar.symbol)
@@ -320,7 +316,7 @@ def validate_isin_continuity(
         ):
             raise MissingCorporateActionError(
                 f"{bar.symbol}: ISIN changed from {previous.isin} to "
-                f"{bar.isin} on {bar.bar_date} without a same-date corporate action"
+                f"{bar.isin} on {bar.bar_date} without a matching corporate action"
             )
         previous_by_symbol[bar.symbol] = bar
 
@@ -463,6 +459,19 @@ def _can_explain_isin_change(action: ParsedCorporateAction) -> bool:
     if action.action_type != CorporateActionType.IGNORED:
         return False
     return _has_ignored_identifier_event(_normalise_text(action.purpose))
+
+
+def _isin_explaining_action_dates(
+    actions: Iterable[ParsedCorporateAction],
+) -> set[tuple[str, date]]:
+    dates = set()
+    for action in actions:
+        if not _can_explain_isin_change(action):
+            continue
+        dates.add((action.symbol, action.ex_date))
+        if action.record_date is not None:
+            dates.add((action.symbol, action.record_date))
+    return dates
 
 
 def _has_ignored_identifier_event(value: str) -> bool:
