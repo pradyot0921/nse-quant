@@ -713,3 +713,26 @@ ISIN continuity may be explained by an identifier-changing corporate action on e
 **Affected experiments:** Processed dataset construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, benchmark comparison, and all downstream Phase 1 reports.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-040 — Official Nifty 100 TRI benchmark source
+
+**Date:** 24 August 2026
+**Status:** Accepted
+
+**Old rule:** Phase 1 named the Nifty 100 Total Return Index as the benchmark, but there was no implemented source contract, parser, or date-coverage validation for the benchmark series.
+
+**New rule:** V0 uses the official NSE Indices historical-data report `Total returns Index Values` for `NIFTY 100`. Raw benchmark endpoint responses are local data under `data/raw/benchmarks/`, processed benchmark CSVs are local derived data under `data/processed/benchmarks/`, and neither is tracked. The committed artifact must be a validation report under `docs/validation/` with source, row counts, missing dates, extra dates, and interpretation.
+
+Benchmark rows must have one index name, unique dates, positive TRI values, and one row for every ordinary research-bar session in the checked calendar. Missing benchmark dates are blocking. Extra dates are reported but are not blocking by themselves because D-029 excludes special sessions from V0 research bars.
+
+If the official TRI series cannot be retrieved for an engineering run, any fallback must remain labelled as approximate under the existing Phase 0/Phase 1 fallback language and must not be used to approve or reject a strategy for paper/live promotion.
+
+**Evidence:** `docs/validation/NIFTY100_TRI_BENCHMARK_SOURCE_V0.md` records the source contract. The first automation-environment fetch attempt reached NSE Indices but returned the historical-data HTML page rather than the JSON TRI payload, so no benchmark rows or validation artifact were committed from that response.
+
+**Reason:** Benchmark handling must be frozen before B001 so the comparison period, dividend treatment, and date-alignment rules are not chosen after strategy results exist. The official TRI includes dividend effects and reinvestment, matching the Phase 0 benchmark requirement.
+
+**Affected experiments:** Benchmark ingestion, B001, B001-S015, B002, B002-S015, B003, B003-S015, reporting, and all Phase 1 benchmark-relative drawdown checks.
+
+**Rerun required:** No strategy run exists yet.
