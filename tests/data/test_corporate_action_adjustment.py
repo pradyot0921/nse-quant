@@ -197,6 +197,36 @@ def test_adjust_ohlcv_allows_isin_change_with_split_on_same_date():
     assert adjusted[1].adjusted_open == Decimal("2188.000000")
 
 
+def test_adjust_ohlcv_allows_isin_change_on_split_record_date():
+    action = parse_corporate_action(
+        CorporateActionRecord(
+            symbol="BAJAJFINSV",
+            purpose="Face Value Split (Sub-Division) - From Rs 5/- Per Share To Re 1/- Per Share",
+            ex_date=date(2022, 9, 13),
+            record_date=date(2022, 9, 14),
+        )
+    )
+    raw_bars = [
+        bar(
+            symbol="BAJAJFINSV",
+            bar_date=date(2022, 9, 12),
+            close="17200.00",
+            isin="INE918I01018",
+        ),
+        bar(
+            symbol="BAJAJFINSV",
+            bar_date=date(2022, 9, 14),
+            close="1720.00",
+            isin="INE918I01026",
+        ),
+    ]
+
+    adjusted = adjust_ohlcv_bars(raw_bars, [action])
+
+    assert adjusted[0].price_factor == Decimal("0.2000000000")
+    assert adjusted[1].price_factor == Decimal("1")
+
+
 def test_adjust_ohlcv_refuses_isin_change_with_dividend_on_same_date():
     dividend = parse_corporate_action(
         record("Interim Dividend Rs. 8 Per Share", ex_date=date(2025, 11, 3))
