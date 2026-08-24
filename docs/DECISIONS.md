@@ -631,3 +631,22 @@ Special sessions remain part of raw-file auditing. They are excluded from emitte
 **Affected experiments:** Raw market-data validation, processed dataset construction, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
 
 **Rerun required:** No. No processed full-window dataset, universe freeze, or strategy run exists yet.
+
+---
+
+## D-036 — Full-window corporate-action parser vocabulary updates
+
+**Date:** 24 August 2026
+**Status:** Accepted
+
+**Old rule:** The one-year corporate-action corpus drove parser support for modern NSE split wording, ordinary bonus ratios, buybacks written as `Buy Back`, and common no-price-adjustment events. Full-window legacy vocabulary from 2016 onward had not yet been scanned.
+
+**New rule:** V0 additionally treats `Buyback`, `Buy-Back`, `Buyback Of Shares`, and `Buy-Back Of Shares` as `IGNORED` no-price-adjustment events. Messy NSE general-meeting and book-closure variants such as `Extra Ordinary General Meeting`, `Extra-Ordinary General Meeting`, `Annual Book Closure`, and `Annual Book Closing` are also `IGNORED`. Abbreviated legacy split purposes of the form `Fv Splt Frm Rs X To Rs/Re Y` are parsed as deterministic face-value splits. Ordinary equity bonus ratios tolerate observed punctuation and spacing variants such as `Bonus 1: 1`, `Bonus- 1:2`, and `Bonus 1:1/Dividend`.
+
+**Evidence:** The first full-window corporate-action scan for 2016-01-01 through 2026-08-19 found safe false negatives before universe selection: 127 `Buyback` records, 153 `Extra Ordinary General Meeting` records, 17 `Extra-Ordinary General Meeting` records, multiple book-closure variants, 14 abbreviated `Fv Splt Frm ...` split records, and several ordinary bonus ratios blocked only by spacing or punctuation.
+
+**Reason:** Buybacks and meeting/book-closure notices do not mechanically multiply or dilute the holdings of non-participating shareholders and should not create needless universe exclusions. The abbreviated `Fv Splt Frm ...` strings encode the same old/new face-value relationship as already supported full split wording, so keeping them unsupported would falsely exclude symbols with deterministic split adjustments. These changes are corpus-derived and made before universe thresholds or strategy results exist.
+
+**Affected experiments:** Corporate-action validation, adjusted OHLCV construction, universe construction, B001, B001-S015, B002, B002-S015, B003, B003-S015, and all downstream Phase 1 reports.
+
+**Rerun required:** Completed in `docs/validation/CORPORATE_ACTION_FULL_WINDOW_SCAN_V0.md`. No universe freeze or strategy run exists yet.

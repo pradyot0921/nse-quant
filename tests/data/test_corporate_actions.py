@@ -80,6 +80,21 @@ def test_parse_split_from_subdivision_text():
             Decimal("0.5"),
             Decimal("2"),
         ),
+        (
+            "Fv Splt Frm Rs 10 To Rs 2",
+            Decimal("0.2"),
+            Decimal("5"),
+        ),
+        (
+            "Fv Splt Frm Rs 10 To Re 1",
+            Decimal("0.1"),
+            Decimal("10"),
+        ),
+        (
+            "Fv Splt Frm Rs 5 To Re 1",
+            Decimal("0.2"),
+            Decimal("5"),
+        ),
     ],
 )
 def test_real_nse_split_purposes_parse_from_face_value_per_share(
@@ -224,6 +239,29 @@ def test_known_noop_meeting_is_ignored():
     assert action.volume_adjustment_factor == Decimal("1")
 
 
+@pytest.mark.parametrize(
+    "purpose",
+    [
+        "Extra Ordinary General Meeting",
+        "Extra-Ordinary General Meeting",
+        "Extra- Ordinary General Meeting",
+        "Extra Ordinary  General Meeting",
+        "Annual General Meetingdividend - Rs 2.5 Per Share",
+        "Annual Book Closure",
+        "Annual Book Closing",
+        "Annual Closing",
+        "Buyback",
+        "Buyback Of Shares",
+    ],
+)
+def test_real_nse_noop_corpus_purposes_are_ignored(purpose):
+    action = parse_corporate_action(record(purpose))
+
+    assert action.action_type == CorporateActionType.IGNORED
+    assert action.price_adjustment_factor == Decimal("1")
+    assert action.volume_adjustment_factor == Decimal("1")
+
+
 def test_name_change_is_ignored_for_price_adjustment():
     action = parse_corporate_action(record("Change in name of the company"))
 
@@ -270,6 +308,25 @@ def test_bonus_with_time_like_colon_token_is_unsupported():
     assert action.action_type == CorporateActionType.UNSUPPORTED
     assert action.price_adjustment_factor == Decimal("1")
     assert action.volume_adjustment_factor == Decimal("1")
+
+
+@pytest.mark.parametrize(
+    ("purpose", "price_factor", "volume_factor"),
+    [
+        ("Bonus 1: 1", Decimal("0.5"), Decimal("2")),
+        ("Bonus 1:1/Dividend- Rs 7 Per Share", Decimal("0.5"), Decimal("2")),
+        ("Bonus- 1:2", Decimal("0.6666666667"), Decimal("1.5000000000")),
+        ("Bonus:1:1", Decimal("0.5"), Decimal("2")),
+    ],
+)
+def test_real_nse_bonus_punctuation_variants_parse(
+    purpose, price_factor, volume_factor
+):
+    action = parse_corporate_action(record(purpose))
+
+    assert action.action_type == CorporateActionType.BONUS
+    assert action.price_adjustment_factor == price_factor
+    assert action.volume_adjustment_factor == volume_factor
 
 
 def test_factors_apply_only_before_ex_date_for_matching_symbol():
