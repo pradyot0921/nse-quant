@@ -9,6 +9,7 @@ archive storage.
 from __future__ import annotations
 
 from datetime import date
+from http.client import HTTPException
 import io
 from pathlib import Path
 import re
@@ -160,6 +161,12 @@ def _fetch_with_retries(
             if attempt == attempts:
                 raise LegacyBhavcopyDownloadRetryableError(
                     f"timed out downloading {url}: {exc}"
+                ) from exc
+            time.sleep(retry_delay_seconds)
+        except HTTPException as exc:
+            if attempt == attempts:
+                raise LegacyBhavcopyDownloadRetryableError(
+                    f"interrupted HTTP response downloading {url}: {exc}"
                 ) from exc
             time.sleep(retry_delay_seconds)
         except LegacyBhavcopyArchiveNotFoundError:

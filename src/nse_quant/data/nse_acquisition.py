@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 import csv
+from http.client import HTTPException
 import io
 from pathlib import Path
 import re
@@ -326,6 +327,12 @@ def _fetch_with_retries(
             if attempt == attempts:
                 raise UDiffDownloadRetryableError(
                     f"timed out downloading {url}: {exc}"
+                ) from exc
+            time.sleep(retry_delay_seconds)
+        except HTTPException as exc:
+            if attempt == attempts:
+                raise UDiffDownloadRetryableError(
+                    f"interrupted HTTP response downloading {url}: {exc}"
                 ) from exc
             time.sleep(retry_delay_seconds)
         except UDiffArchiveNotFoundError:
