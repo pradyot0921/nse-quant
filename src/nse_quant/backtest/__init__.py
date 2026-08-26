@@ -14,6 +14,13 @@ from nse_quant.backtest.portfolio import (
     PortfolioState,
     Position,
 )
+from nse_quant.backtest.rebalance import (
+    PlannedRebalanceOrder,
+    RebalancePlanError,
+    RebalancePlan,
+    RebalanceReason,
+    plan_rebalance_orders,
+)
 
 __all__ = [
     "BacktestBar",
@@ -26,6 +33,11 @@ __all__ = [
     "PortfolioSnapshot",
     "PortfolioState",
     "Position",
+    "PlannedRebalanceOrder",
+    "RebalancePlanError",
+    "RebalancePlan",
+    "RebalanceReason",
     "build_portfolio_fills_with_costs",
+    "plan_rebalance_orders",
     "run_day_loop",
 ]

@@ -950,3 +950,47 @@ results from hiding errors in signal-date selection or momentum arithmetic.
 backtest execution, reporting, and all Phase 1 strategy diagnostics.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-046 — Rebalance planner emits exits before entry intents
+
+**Date:** 26 August 2026
+**Status:** Accepted
+
+**Old rule:** D-045 produced desired ranked symbols, but there was still no
+boundary that compared those desired symbols with current holdings. The next
+step toward B001 execution could have mixed signal ranking, rebalance changes,
+position sizing, prices, costs, and portfolio accounting.
+
+**New rule:** The rebalance planner is a symbol-level transition layer only. It
+takes a signal date, current `PortfolioState`, and desired symbols from the
+signal layer. It emits deterministic planned rebalance orders:
+
+- held symbols absent from the desired list become full-quantity SELL exits;
+- desired symbols already held produce no order;
+- desired symbols not currently held become BUY entry intents with no share
+  quantity yet;
+- exit orders always sequence before entry intents;
+- exits are sorted alphabetically by symbol;
+- entries preserve the desired-symbol order from the signal layer.
+
+Entry share quantity is intentionally unresolved in this slice because sizing
+requires cash, prices, execution-date bars, and cost/slippage assumptions. This
+planner does not create executable fills, apply prices, apply costs, run a
+portfolio, compare benchmarks, enforce turnover gates, or report B001 results.
+
+**Evidence:** New tests cover exit-before-entry ordering, full-quantity exits,
+held desired symbols producing no order, entry order preserving signal rank,
+empty desired lists exiting all holdings, duplicate desired-symbol rejection,
+and signal-date validation.
+
+**Reason:** The transition from signal output to portfolio changes should be
+auditable before sizing and execution are introduced. Splitting this boundary
+keeps B001 order construction from hiding whether changes came from ranking,
+rebalance comparison, share sizing, or execution-cost assumptions.
+
+**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
+backtest execution, reporting, and all Phase 1 trade-log diagnostics.
+
+**Rerun required:** No strategy run exists yet.
