@@ -909,3 +909,44 @@ B001-S015, B002, B002-S015, B003, B003-S015, reporting, and all Phase 1
 cost-drag checks.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-045 — Weekly momentum signals are ranked mechanically before execution
+
+**Date:** 26 August 2026
+**Status:** Accepted
+
+**Old rule:** The experiment ledger pre-registered 60-session weekly relative
+momentum for B001/B002/B003, but the repository still had no strategy signal
+boundary. Ranking, rebalance dates, execution, and portfolio accounting were
+not separated in code.
+
+**New rule:** The first strategy slice produces only weekly ranking signals.
+For each supplied ordinary-session bar series, the signal date is the final
+session in each ISO week. A symbol's score is:
+
+```text
+adjusted_close_on_signal_date / adjusted_close_60_sessions_earlier - 1
+```
+
+Symbols missing either the current close or the exact lookback-session close
+are ineligible for that signal date. Scores rank by descending momentum, with
+alphabetical symbol as the deterministic tie-break. The output is the desired
+symbol list and full ranked score table for each signal date.
+
+This slice does not create orders, size positions, apply execution costs, run a
+portfolio, compare benchmarks, enforce turnover gates, or report B001 results.
+
+**Evidence:** New tests cover final-session-of-week signal dates, exact
+lookback-session scoring, missing-symbol ineligibility, alphabetical tie-breaks,
+input validation, and duplicate daily-date rejection.
+
+**Reason:** Strategy ranking should be auditable before order construction and
+execution costs are connected. Keeping the ranking layer pure prevents B001
+results from hiding errors in signal-date selection or momentum arithmetic.
+
+**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
+backtest execution, reporting, and all Phase 1 strategy diagnostics.
+
+**Rerun required:** No strategy run exists yet.
