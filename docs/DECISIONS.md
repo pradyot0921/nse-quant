@@ -716,6 +716,29 @@ ISIN continuity may be explained by an identifier-changing corporate action on e
 
 ---
 
+## D-040 — Official Nifty 100 TRI benchmark source
+
+**Date:** 24 August 2026
+**Status:** Accepted
+
+**Old rule:** Phase 1 named the Nifty 100 Total Return Index as the benchmark, but there was no implemented source contract, parser, or date-coverage validation for the benchmark series.
+
+**New rule:** V0 uses the official NSE Indices historical-data report `Total returns Index Values` for `NIFTY 100`. Raw benchmark endpoint responses are local data under `data/raw/benchmarks/`, processed benchmark CSVs are local derived data under `data/processed/benchmarks/`, and neither is tracked. The committed artifact must be a validation report under `docs/validation/` with source, row counts, missing dates, extra dates, and interpretation.
+
+Benchmark rows must have one index name, unique dates, positive TRI values, and one row for every ordinary research-bar session in the checked calendar. Missing benchmark dates are blocking. Extra dates are reported but are not blocking by themselves because D-029 excludes special sessions from V0 research bars.
+
+If the official TRI series cannot be retrieved for an engineering run, any fallback must remain labelled as approximate under the existing Phase 0/Phase 1 fallback language and must not be used to approve or reject a strategy for paper/live promotion.
+
+**Evidence:** `docs/validation/NIFTY100_TRI_BENCHMARK_SOURCE_V0.md` records the source contract. The first automation-environment fetch attempt reached NSE Indices but returned the historical-data HTML page rather than the JSON TRI payload, so no benchmark rows or validation artifact were committed from that response.
+
+**Reason:** Benchmark handling must be frozen before B001 so the comparison period, dividend treatment, and date-alignment rules are not chosen after strategy results exist. The official TRI includes dividend effects and reinvestment, matching the Phase 0 benchmark requirement.
+
+**Affected experiments:** Benchmark ingestion, B001, B001-S015, B002, B002-S015, B003, B003-S015, reporting, and all Phase 1 benchmark-relative drawdown checks.
+
+**Rerun required:** No strategy run exists yet.
+
+---
+
 ## D-041 — Nifty 100 TRI fetch and 2024 special-session calendar correction
 
 **Date:** 24 August 2026
@@ -767,23 +790,41 @@ are excluded by default. No strategy run exists yet.
 
 ---
 
-## D-040 — Official Nifty 100 TRI benchmark source
+## D-042 — Backtest accounting core uses Decimal cash and explicit fills
 
 **Date:** 24 August 2026
 **Status:** Accepted
 
-**Old rule:** Phase 1 named the Nifty 100 Total Return Index as the benchmark, but there was no implemented source contract, parser, or date-coverage validation for the benchmark series.
+**Old rule:** Phase 1 required cash and holdings accounting plus a daily NAV
+invariant, but the backtest package still contained only scaffolding and no
+implemented accounting boundary.
 
-**New rule:** V0 uses the official NSE Indices historical-data report `Total returns Index Values` for `NIFTY 100`. Raw benchmark endpoint responses are local data under `data/raw/benchmarks/`, processed benchmark CSVs are local derived data under `data/processed/benchmarks/`, and neither is tracked. The committed artifact must be a validation report under `docs/validation/` with source, row counts, missing dates, extra dates, and interpretation.
+**New rule:** The first backtest-core slice introduces only processed-dataset
+bar access and portfolio accounting primitives. Processed bars are read from
+the already built adjusted OHLCV CSV and exposed as deterministic daily symbol
+lookups. Portfolio state is immutable, cash is quantized to paise using
+`Decimal` and `ROUND_HALF_UP`, fills are explicit events with deterministic
+ordering by `(trade_date, sequence, symbol, side)`, and mark-to-market NAV must
+equal `cash + holdings_value` exactly after paise quantization.
 
-Benchmark rows must have one index name, unique dates, positive TRI values, and one row for every ordinary research-bar session in the checked calendar. Missing benchmark dates are blocking. Extra dates are reported but are not blocking by themselves because D-029 excludes special sessions from V0 research bars.
+The slice deliberately does not implement strategy rules, benchmark comparison,
+cost aggregation, slippage, reporting, or a day-loop engine. It rejects binary
+float prices/fees at the fill boundary, rejects buys that would create negative
+cash, rejects sells above held quantity, and halts valuation when a held symbol
+has no close.
 
-If the official TRI series cannot be retrieved for an engineering run, any fallback must remain labelled as approximate under the existing Phase 0/Phase 1 fallback language and must not be used to approve or reject a strategy for paper/live promotion.
+**Evidence:** New tests cover processed-bar loading/grouping, duplicate
+symbol-date rejection, positive adjusted prices, buy/sell accounting, exact NAV
+invariant, binary-float rejection, negative-cash rejection, short-sell
+rejection, deterministic fill ordering, and missing-close halt.
 
-**Evidence:** `docs/validation/NIFTY100_TRI_BENCHMARK_SOURCE_V0.md` records the source contract. The first automation-environment fetch attempt reached NSE Indices but returned the historical-data HTML page rather than the JSON TRI payload, so no benchmark rows or validation artifact were committed from that response.
+**Reason:** The accounting primitive should be proven independently before B001
+or any strategy logic can hide errors inside a long backtest. Keeping fills
+explicit and deterministic gives the later day-loop engine a narrow surface for
+T+1 execution, cost application, and manual three-trade reconciliation.
 
-**Reason:** Benchmark handling must be frozen before B001 so the comparison period, dividend treatment, and date-alignment rules are not chosen after strategy results exist. The official TRI includes dividend effects and reinvestment, matching the Phase 0 benchmark requirement.
-
-**Affected experiments:** Benchmark ingestion, B001, B001-S015, B002, B002-S015, B003, B003-S015, reporting, and all Phase 1 benchmark-relative drawdown checks.
+**Affected experiments:** Backtest engine, portfolio accounting, B001,
+B001-S015, B002, B002-S015, B003, B003-S015, reporting, and all Phase 1 NAV
+checks.
 
 **Rerun required:** No strategy run exists yet.
