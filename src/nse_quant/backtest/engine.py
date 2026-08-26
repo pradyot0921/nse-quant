@@ -40,6 +40,8 @@ def run_day_loop(
     """Apply scheduled fills by date and mark NAV once per day."""
 
     days = tuple(sorted(daily_bars, key=lambda item: item.trade_date))
+    if not days:
+        raise BacktestEngineError("daily_bars is empty")
     _validate_unique_days(days)
 
     fills_by_date = _fills_by_date(fills)

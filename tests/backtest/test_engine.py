@@ -80,6 +80,11 @@ def test_day_loop_rejects_fills_on_dates_without_daily_bars():
         )
 
 
+def test_day_loop_rejects_empty_daily_bars():
+    with pytest.raises(BacktestEngineError, match="daily_bars is empty"):
+        run_day_loop([], starting_state=PortfolioState.starting_cash("1000"))
+
+
 def test_day_loop_rejects_duplicate_daily_bar_dates():
     with pytest.raises(BacktestEngineError, match="duplicate backtest days"):
         run_day_loop(
