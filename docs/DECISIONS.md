@@ -867,3 +867,45 @@ B001-S015, B002, B002-S015, B003, B003-S015, reporting, and all Phase 1 NAV
 checks.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-044 — Execution adapter applies adverse slippage before cost allocation
+
+**Date:** 26 August 2026
+**Status:** Accepted
+
+**Old rule:** D-043 allowed the day-loop engine to consume explicit
+`PortfolioFill` objects, but there was no backtest boundary for turning
+requested executions into slippage-adjusted fills with broker charges.
+
+**New rule:** Requested executions are represented as explicit
+`ExecutionFillRequest` rows with trade date, sequence, symbol, side, quantity,
+and reference price. The execution adapter applies deterministic adverse
+slippage to the reference price first: buys execute at
+`reference_price * (1 + slippage_rate)` and sells execute at
+`reference_price * (1 - slippage_rate)`, rounded to paise. It then passes the
+slipped fills to the existing India delivery cost engine, using the daily cost
+total as authoritative and the existing per-fill allocations as reporting and
+portfolio-fee allocations.
+
+The adapter is intentionally not a strategy engine. It does not generate
+signals, size orders, compare benchmarks, enforce turnover limits, or write
+reports. Slippage rates must be explicit decimal-safe values, and binary floats
+remain rejected at the boundary.
+
+**Evidence:** New tests cover adverse buy/sell slippage direction, deterministic
+fill ordering, daily cost grouping, allocated fees summing back to the
+authoritative daily cost total, compatibility with the day-loop engine, and
+invalid slippage/reference-price rejection.
+
+**Reason:** Phase 1 needs cost-aware explicit fills before B001 can run, but
+strategy logic should not be mixed into the cost boundary. Applying slippage
+before fee calculation matches the executed-turnover basis used by the cost
+engine, while keeping all broker fee arithmetic in one module.
+
+**Affected experiments:** Backtest execution, portfolio accounting, B001,
+B001-S015, B002, B002-S015, B003, B003-S015, reporting, and all Phase 1
+cost-drag checks.
+
+**Rerun required:** No strategy run exists yet.
