@@ -828,3 +828,42 @@ B001-S015, B002, B002-S015, B003, B003-S015, reporting, and all Phase 1 NAV
 checks.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-043 — Backtest day loop applies explicit fills before daily valuation
+
+**Date:** 26 August 2026
+**Status:** Accepted
+
+**Old rule:** D-042 introduced processed-bar access and portfolio accounting
+primitives, but there was still no explicit day loop connecting daily bars,
+scheduled fills, and daily NAV snapshots.
+
+**New rule:** The first day-loop engine is deliberately minimal. It accepts
+already grouped `DailyBars`, a starting `PortfolioState`, and pre-scheduled
+explicit `PortfolioFill` objects. For each trading date, it applies fills
+scheduled for that date through `PortfolioState`, then marks the portfolio to
+market using that day's adjusted close values, and records one daily
+`PortfolioSnapshot`.
+
+The engine sorts daily bars by date, rejects duplicate day entries, rejects
+fills scheduled for dates absent from the supplied daily-bar series, and relies
+on portfolio accounting to halt if a held symbol has no valuation close. It
+does not implement signals, rankings, slippage, costs, benchmark comparison,
+turnover checks, reporting, or strategy-specific execution rules.
+
+**Evidence:** New tests cover out-of-order daily input, scheduled buy and sell
+fills, daily NAV snapshots, rejection of fills on non-session dates, duplicate
+day rejection, and the missing-close valuation halt.
+
+**Reason:** A small explicit day loop proves the accounting pipeline can move
+through time before strategy code is introduced. Keeping fills pre-scheduled
+prevents the first engine slice from mixing portfolio accounting with B001
+signal generation or T+1 order construction.
+
+**Affected experiments:** Backtest engine, portfolio accounting, B001,
+B001-S015, B002, B002-S015, B003, B003-S015, reporting, and all Phase 1 NAV
+checks.
+
+**Rerun required:** No strategy run exists yet.
