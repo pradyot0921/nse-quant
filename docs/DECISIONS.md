@@ -1245,3 +1245,47 @@ B001, B001-S015, B002, B002-S015, B003, B003-S015, and all Phase 1 manual
 reconciliation checks.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-053 — Performance metrics compare strategy NAV with aligned TRI
+
+**Date:** 31 August 2026
+**Status:** Accepted
+
+**Old rule:** Phase 1 required net strategy results, Nifty 100 TRI comparison,
+CAGR, volatility, maximum drawdown, and a benchmark-relative drawdown gate, but
+the repository had no implemented reporting primitive for those metrics.
+
+**New rule:** V0 performance metrics are calculated from daily strategy
+portfolio snapshots and official Nifty 100 TRI rows aligned on the strategy
+snapshot dates. Every strategy date must have a benchmark row. Extra benchmark
+rows may be ignored by the metric primitive because benchmark coverage and
+extra-date reporting are handled by the benchmark validation artifact.
+
+CAGR uses calendar days between the first and final aligned observations, with
+a 365-day year. Annualized volatility uses sample standard deviation of period
+returns multiplied by `sqrt(252)`. Maximum drawdown is reported as a positive
+magnitude from the daily close series. The benchmark-relative drawdown gate
+passes when strategy maximum drawdown is no worse than benchmark maximum
+drawdown over the identical aligned dates.
+
+This slice does not write final reports, run B001/B002/B003, load processed
+datasets, evaluate turnover gates, or decide whether any strategy passes Phase
+1 overall.
+
+**Evidence:** New tests cover aligned strategy NAV versus benchmark TRI,
+ignoring extra benchmark rows, CAGR over a one-calendar-year period,
+annualized volatility, maximum drawdown, drawdown gate PASS/FAIL, missing
+benchmark-date rejection, duplicate-date rejection, empty input rejection, and
+non-positive strategy NAV rejection.
+
+**Reason:** Benchmark-relative metrics must be defined before B001 results
+exist. Keeping the metric primitive small and date-aligned prevents later
+reporting from comparing strategy and benchmark over subtly different periods.
+
+**Affected experiments:** Reporting, benchmark comparison, B001, B001-S015,
+B002, B002-S015, B003, B003-S015, and all Phase 1 benchmark-relative drawdown
+checks.
+
+**Rerun required:** No strategy run exists yet.
