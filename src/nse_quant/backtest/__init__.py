@@ -21,6 +21,11 @@ from nse_quant.backtest.rebalance import (
     RebalanceReason,
     plan_rebalance_orders,
 )
+from nse_quant.backtest.sizing import (
+    OrderSizingError,
+    SizedRebalanceOrders,
+    size_rebalance_orders,
+)
 
 __all__ = [
     "BacktestBar",
@@ -29,6 +34,7 @@ __all__ = [
     "ExecutionCostResult",
     "ExecutionFillRequest",
     "FillSide",
+    "OrderSizingError",
     "PortfolioFill",
     "PortfolioSnapshot",
     "PortfolioState",
@@ -37,7 +43,9 @@ __all__ = [
     "RebalancePlanError",
     "RebalancePlan",
     "RebalanceReason",
+    "SizedRebalanceOrders",
     "build_portfolio_fills_with_costs",
     "plan_rebalance_orders",
     "run_day_loop",
+    "size_rebalance_orders",
 ]
