@@ -1289,3 +1289,38 @@ B002, B002-S015, B003, B003-S015, and all Phase 1 benchmark-relative drawdown
 checks.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-054 — Phase 1 ledger references frozen V0 universe and dataset
+
+**Date:** 31 August 2026
+**Status:** Accepted
+
+**Old rule:** The six Phase 1 experiment ledger rows were pre-registered with
+placeholder values stating that the universe and research dataset were pending
+freeze before execution.
+
+**New rule:** After the V0 universe freeze and processed dataset build, all six
+planned Phase 1 ledger rows reference the frozen universe version
+`nifty100_v0_20_d037` and the processed dataset version
+`nifty100_v0_adjusted_ohlcv_d039`.
+
+The ledger result columns remain blank and every row remains `PLANNED`. This
+change records already-frozen inputs only; it does not execute B001/B002/B003,
+inspect strategy results, or update any result field.
+
+**Evidence:** `docs/validation/NIFTY100_V0_UNIVERSE_FREEZE.md` records
+selection rule version `nifty100_v0_20_d037`. `docs/validation/PROCESSED_DATASET_V0.md`
+records dataset version `nifty100_v0_adjusted_ohlcv_d039`. New tests assert
+that the six Phase 1 ledger rows contain those versions, contain no pending
+universe/data placeholders, and still have blank result columns.
+
+**Reason:** The ledger is the audit surface for pre-registered runs. Once the
+universe and processed data are frozen, leaving placeholder values in the
+ledger makes the run inputs ambiguous and weakens the record before B001.
+
+**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
+and all Phase 1 report/ledger artifacts.
+
+**Rerun required:** No strategy run exists yet.
