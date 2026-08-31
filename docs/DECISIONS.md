@@ -994,3 +994,56 @@ rebalance comparison, share sizing, or execution-cost assumptions.
 backtest execution, reporting, and all Phase 1 trade-log diagnostics.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-047 — Rebalance sizing uses next-session opens and affordability checks
+
+**Date:** 31 August 2026
+**Status:** Accepted
+
+**Old rule:** D-046 created deterministic exit orders and entry intents, but
+entry share quantities were intentionally unresolved. A later layer still had
+to apply execution-date prices, slippage, transaction costs, cash constraints,
+and max-position constraints without mixing those decisions into signal ranking
+or rebalance planning.
+
+**New rule:** The order-sizing layer takes a `RebalancePlan`, the current
+`PortfolioState`, execution-date `DailyBars`, and a pre-registered
+`max_positions` value. Execution bars must be strictly after the signal date.
+Desired symbols must not exceed `max_positions`.
+
+Sizing creates executable fill requests as follows:
+
+- exit orders use the full planned quantity and the execution-date adjusted
+  open as the reference price;
+- exits remain sequenced before entries;
+- entry budget is capped by the smaller of available cash per new entry and
+  reference NAV divided by desired position count;
+- entry quantities are whole shares floored at the execution-date adjusted
+  open;
+- the existing execution-cost adapter applies the registered adverse slippage
+  and cost model as the affordability check;
+- if the resulting fills would make cash negative, entry quantities are reduced
+  from the last entry backward until the full fill set is affordable;
+- if even one share is unaffordable, the entry is skipped.
+
+Missing execution bars halt sizing. This slice does not generate strategy
+signals, choose rebalance dates, execute a full portfolio run, compare the
+benchmark, enforce turnover gates, or report B001 results.
+
+**Evidence:** New tests cover conversion from rebalance plans to executable fill
+requests, full-quantity exits, entry sizing from next-session opens, gap/cost
+resizing to avoid negative cash, unaffordable entry skips, max-position
+rejection, same-day execution rejection, and missing execution-bar rejection.
+
+**Reason:** Phase 1 requires that a close(T) signal create only an intent and
+that final entry quantity be recomputed at the T+1 simulated fill price with
+costs. Using the already-tested execution-cost adapter as the affordability
+check avoids a second fee estimate while preserving the rule that the backtest
+must never fund a gap-up entry with implicit leverage.
+
+**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
+backtest execution, reporting, and all Phase 1 trade-log diagnostics.
+
+**Rerun required:** No strategy run exists yet.
