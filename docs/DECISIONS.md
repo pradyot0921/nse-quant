@@ -997,45 +997,6 @@ backtest execution, reporting, and all Phase 1 trade-log diagnostics.
 
 ---
 
-## D-048 — Rebalance execution loop consumes precomputed desired symbols
-
-**Date:** 31 August 2026
-**Status:** Accepted
-
-**Old rule:** The repository had separate layers for daily portfolio
-accounting, costed execution fills, momentum ranking signals, rebalance plans,
-and order sizing. There was still no small boundary proving that a close(T)
-desired-symbol list executes on the next available session using the current
-portfolio state.
-
-**New rule:** The rebalance execution loop consumes daily bars plus a
-precomputed mapping of signal date to desired symbols. For each ordinary
-session, it executes the prior session's desired-symbol list at the current
-session open by calling the existing rebalance planner, order sizer, and
-execution-cost adapter, then marks NAV at that session's close.
-
-Signals scheduled for dates absent from the daily bar series halt the loop.
-Signals on the final supplied session are recorded as unexecuted because there
-is no next-session open inside the supplied data. This slice does not generate
-signals, choose universe members, run B001 on the frozen dataset, compare the
-benchmark, enforce turnover gates, or produce final reports.
-
-**Evidence:** New tests cover next-session execution timing, current-state use
-for later rebalance plans, final-session unexecuted signals, unknown signal-date
-rejection, duplicate daily-date rejection, and empty input rejection.
-
-**Reason:** The backtest should connect the already-tested layers without
-turning the first integrated step into a full strategy result. Keeping the loop
-input as precomputed desired symbols makes the execution timing and accounting
-boundary auditable before B001/B002/B003 are run.
-
-**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
-backtest execution, reporting, and all Phase 1 trade-log diagnostics.
-
-**Rerun required:** No strategy run exists yet.
-
----
-
 ## D-047 — Rebalance sizing uses next-session opens and affordability checks
 
 **Date:** 31 August 2026
@@ -1084,5 +1045,83 @@ must never fund a gap-up entry with implicit leverage.
 
 **Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
 backtest execution, reporting, and all Phase 1 trade-log diagnostics.
+
+**Rerun required:** No strategy run exists yet.
+
+---
+
+## D-048 — Rebalance execution loop consumes precomputed desired symbols
+
+**Date:** 31 August 2026
+**Status:** Accepted
+
+**Old rule:** The repository had separate layers for daily portfolio
+accounting, costed execution fills, momentum ranking signals, rebalance plans,
+and order sizing. There was still no small boundary proving that a close(T)
+desired-symbol list executes on the next available session using the current
+portfolio state.
+
+**New rule:** The rebalance execution loop consumes daily bars plus a
+precomputed mapping of signal date to desired symbols. For each ordinary
+session, it executes the prior session's desired-symbol list at the current
+session open by calling the existing rebalance planner, order sizer, and
+execution-cost adapter, then marks NAV at that session's close.
+
+Signals scheduled for dates absent from the daily bar series halt the loop.
+Signals on the final supplied session are recorded as unexecuted because there
+is no next-session open inside the supplied data. This slice does not generate
+signals, choose universe members, run B001 on the frozen dataset, compare the
+benchmark, enforce turnover gates, or produce final reports.
+
+**Evidence:** New tests cover next-session execution timing, current-state use
+for later rebalance plans, final-session unexecuted signals, unknown signal-date
+rejection, duplicate daily-date rejection, and empty input rejection.
+
+**Reason:** The backtest should connect the already-tested layers without
+turning the first integrated step into a full strategy result. Keeping the loop
+input as precomputed desired symbols makes the execution timing and accounting
+boundary auditable before B001/B002/B003 are run.
+
+**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
+backtest execution, reporting, and all Phase 1 trade-log diagnostics.
+
+**Rerun required:** No strategy run exists yet.
+
+---
+
+## D-049 — Round-trip turnover is evaluated after fills are produced
+
+**Date:** 31 August 2026
+**Status:** Accepted
+
+**Old rule:** D-004 and D-007 fixed the research rule that turnover is measured
+after the run, but the repository still had no code boundary that counted
+completed round trips by calendar year from explicit fills.
+
+**New rule:** V0 turnover evaluation is a post-run diagnostic over executed
+long-only portfolio fills. It reconstructs open entry lots from BUY fills and
+counts a completed round trip when a SELL closes an entry lot. Completed round
+trips are grouped by the year of the exit fill.
+
+Only caller-supplied complete calendar years are evaluated against the annual
+limit. Partial years can still be reported, but they do not create PASS/FAIL
+status and are not annualised. The evaluator reports every completed round trip,
+including trades beyond the limit; it never blocks the 31st round trip during
+execution.
+
+This slice does not run B001, generate signals, choose a universe, compare the
+benchmark, produce performance metrics, or write final reports.
+
+**Evidence:** New tests cover annual completed-round-trip counts, complete-year
+PASS/FAIL scope, reporting rather than blocking excess turnover, partial lot
+closure, invalid sell rejection, and invalid limit/year inputs.
+
+**Reason:** The turnover gate must be auditable before the first strategy run,
+and the engine must not alter trading behaviour to satisfy the gate. Counting
+from explicit fills keeps the limit separate from signal generation and order
+execution.
+
+**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
+backtest execution, reporting, and all Phase 1 turnover diagnostics.
 
 **Rerun required:** No strategy run exists yet.

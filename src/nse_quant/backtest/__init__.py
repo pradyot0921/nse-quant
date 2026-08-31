@@ -32,6 +32,12 @@ from nse_quant.backtest.sizing import (
     SizedRebalanceOrders,
     size_rebalance_orders,
 )
+from nse_quant.backtest.turnover import (
+    AnnualRoundTripCount,
+    TurnoverEvaluation,
+    TurnoverEvaluationError,
+    evaluate_round_trip_turnover,
+)
 
 __all__ = [
     "BacktestBar",
@@ -40,6 +46,7 @@ __all__ = [
     "ExecutionCostResult",
     "ExecutionFillRequest",
     "FillSide",
+    "AnnualRoundTripCount",
     "OrderSizingError",
     "PortfolioFill",
     "PortfolioSnapshot",
@@ -53,7 +60,10 @@ __all__ = [
     "RebalancePlan",
     "RebalanceReason",
     "SizedRebalanceOrders",
+    "TurnoverEvaluation",
+    "TurnoverEvaluationError",
     "build_portfolio_fills_with_costs",
+    "evaluate_round_trip_turnover",
     "plan_rebalance_orders",
     "run_day_loop",
     "run_rebalance_loop",
