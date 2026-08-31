@@ -1162,3 +1162,46 @@ keeps reporting separate from accounting while making each fill auditable.
 reporting, manual reconciliation, and all Phase 1 trade-log diagnostics.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-051 — Unfilled exits retry before replacement entries
+
+**Date:** 31 August 2026
+**Status:** Accepted
+
+**Old rule:** D-012 required full exits to carry forward and retry when a held
+symbol cannot execute, but the rebalance execution loop either executed a
+planned order on the next session or halted during sizing when a tradeable
+execution bar was unavailable.
+
+**New rule:** The rebalance execution loop may receive an explicit set of
+untradeable symbols by session. When a planned exit symbol is untradeable on
+the execution session, the loop records the full exit as unfilled, leaves the
+position untouched for same-day valuation, and retries the same desired-symbol
+transition on the next supplied session.
+
+Replacement entries from that same transition do not execute while any required
+exit remains unfilled. If a new signal arrives while a prior exit is still
+pending, the loop halts rather than choosing an undocumented priority rule.
+
+This slice does not model intraday partial fills, circuit-limit mechanics,
+missing valuation bars, stale-price reporting, full B001 execution, benchmark
+comparison, or final reports.
+
+**Evidence:** New tests cover unfilled full-exit retry, no stub holding after an
+unfilled exit, replacement entries waiting until exits fill, unknown
+untradeable-date rejection, and halting when a fresh signal arrives before a
+pending exit is resolved.
+
+**Reason:** Phase 1 requires that exits always target the full held quantity
+and never become accidental stub exits. Separating explicit execution
+untradeability from close-price valuation lets the backtester represent a
+temporary no-fill condition without inventing leverage or selling part of a
+position.
+
+**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
+backtest execution, manual reconciliation, reporting, and all Phase 1
+trade-log diagnostics.
+
+**Rerun required:** No strategy run exists yet.
