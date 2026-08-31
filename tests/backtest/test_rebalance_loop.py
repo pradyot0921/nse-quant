@@ -4,7 +4,7 @@ from decimal import Decimal
 import pytest
 
 from nse_quant.backtest.data import BacktestBar, DailyBars
-from nse_quant.backtest.portfolio import FillSide, PortfolioState
+from nse_quant.backtest.portfolio import FillSide, PortfolioState, Position
 from nse_quant.backtest.rebalance_loop import (
     RebalanceLoopError,
     run_rebalance_loop,
@@ -106,6 +106,60 @@ def test_rebalance_loop_records_signal_on_final_session_as_unexecuted():
     assert result.unexecuted_signal_dates == (DAY1,)
 
 
+def test_rebalance_loop_retries_unfilled_full_exit_next_session():
+    starting_state = PortfolioState(
+        cash="0",
+        positions=(Position("AAA", 10),),
+    )
+
+    result = run_rebalance_loop(
+        [
+            day(DAY1, {"AAA": ("100", "100")}),
+            day(DAY2, {"AAA": ("101", "101")}),
+            day(DAY3, {"AAA": ("102", "102")}),
+        ],
+        starting_state=starting_state,
+        desired_symbols_by_signal_date={DAY1: []},
+        max_positions=1,
+        slippage_rate="0",
+        untradeable_symbols_by_date={DAY2: ["AAA"]},
+    )
+
+    assert result.executions[0].unfilled_exit_symbols == ("AAA",)
+    assert result.executions[0].costs.portfolio_fills == ()
+    assert result.snapshots[1].positions[0].quantity == 10
+    assert result.executions[1].costs.portfolio_fills[0].side is FillSide.SELL
+    assert result.executions[1].costs.portfolio_fills[0].quantity == 10
+    assert result.ending_state.positions == ()
+
+
+def test_rebalance_loop_waits_to_enter_replacement_until_exit_fills():
+    starting_state = PortfolioState(
+        cash="0",
+        positions=(Position("AAA", 10),),
+    )
+
+    result = run_rebalance_loop(
+        [
+            day(DAY1, {"AAA": ("100", "100"), "BBB": ("50", "50")}),
+            day(DAY2, {"AAA": ("100", "100"), "BBB": ("50", "50")}),
+            day(DAY3, {"AAA": ("100", "100"), "BBB": ("50", "50")}),
+        ],
+        starting_state=starting_state,
+        desired_symbols_by_signal_date={DAY1: ["BBB"]},
+        max_positions=1,
+        slippage_rate="0",
+        untradeable_symbols_by_date={DAY2: ["AAA"]},
+    )
+
+    assert result.executions[0].costs.portfolio_fills == ()
+    assert [(fill.side, fill.symbol) for fill in result.executions[1].costs.portfolio_fills] == [
+        (FillSide.SELL, "AAA"),
+        (FillSide.BUY, "BBB"),
+    ]
+    assert "BBB" in result.ending_state.positions_by_symbol
+
+
 def test_rebalance_loop_rejects_unknown_signal_dates():
     with pytest.raises(RebalanceLoopError, match="non-session"):
         run_rebalance_loop(
@@ -113,6 +167,38 @@ def test_rebalance_loop_rejects_unknown_signal_dates():
             starting_state=PortfolioState.starting_cash("1000"),
             desired_symbols_by_signal_date={DAY2: ["AAA"]},
             max_positions=1,
+        )
+
+
+def test_rebalance_loop_rejects_new_signal_while_exit_is_pending():
+    starting_state = PortfolioState(
+        cash="0",
+        positions=(Position("AAA", 10),),
+    )
+
+    with pytest.raises(RebalanceLoopError, match="prior exit is pending"):
+        run_rebalance_loop(
+            [
+                day(DAY1, {"AAA": ("100", "100"), "BBB": ("50", "50")}),
+                day(DAY2, {"AAA": ("100", "100"), "BBB": ("50", "50")}),
+                day(DAY3, {"AAA": ("100", "100"), "BBB": ("50", "50")}),
+            ],
+            starting_state=starting_state,
+            desired_symbols_by_signal_date={DAY1: ["BBB"], DAY2: ["BBB"]},
+            max_positions=1,
+            slippage_rate="0",
+            untradeable_symbols_by_date={DAY2: ["AAA"]},
+        )
+
+
+def test_rebalance_loop_rejects_untradeable_symbols_on_non_session_dates():
+    with pytest.raises(RebalanceLoopError, match="non-session"):
+        run_rebalance_loop(
+            [day(DAY1, {"AAA": ("100", "100")})],
+            starting_state=PortfolioState.starting_cash("1000"),
+            desired_symbols_by_signal_date={},
+            max_positions=1,
+            untradeable_symbols_by_date={DAY2: ["AAA"]},
         )
 
 

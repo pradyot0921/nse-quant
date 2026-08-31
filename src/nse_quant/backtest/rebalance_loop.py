@@ -12,7 +12,7 @@ from nse_quant.backtest.execution import (
     ExecutionCostResult,
     build_portfolio_fills_with_costs,
 )
-from nse_quant.backtest.portfolio import PortfolioSnapshot, PortfolioState
+from nse_quant.backtest.portfolio import FillSide, PortfolioSnapshot, PortfolioState
 from nse_quant.backtest.rebalance import RebalancePlan, plan_rebalance_orders
 from nse_quant.backtest.sizing import SizedRebalanceOrders, size_rebalance_orders
 
@@ -28,6 +28,7 @@ class RebalanceExecution:
     plan: RebalancePlan
     sized_orders: SizedRebalanceOrders
     costs: ExecutionCostResult
+    unfilled_exit_symbols: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,7 @@ def run_rebalance_loop(
     desired_symbols_by_signal_date: Mapping[date, Iterable[str]],
     max_positions: int,
     slippage_rate: Decimal | str | int = Decimal("0.0005"),
+    untradeable_symbols_by_date: Mapping[date, Iterable[str]] | None = None,
 ) -> RebalanceLoopResult:
     """Execute each close(T) rebalance intent at the next session open."""
 
@@ -67,26 +69,53 @@ def run_rebalance_loop(
         raise RebalanceLoopError(
             f"signals scheduled for non-session dates: {unknown_signal_dates}"
         )
+    untradeable = _untradeable_by_date(untradeable_symbols_by_date)
+    unknown_untradeable_dates = sorted(set(untradeable) - session_dates)
+    if unknown_untradeable_dates:
+        raise RebalanceLoopError(
+            f"untradeable symbols specified for non-session dates: {unknown_untradeable_dates}"
+        )
 
     state = starting_state
     snapshots: list[PortfolioSnapshot] = []
     executions: list[RebalanceExecution] = []
+    pending_signal: tuple[date, tuple[str, ...]] | None = None
 
     for index, day in enumerate(days):
         if index > 0:
             previous_day = days[index - 1]
-            desired_symbols = signals.get(previous_day.trade_date)
-            if desired_symbols is not None:
+            next_signal = signals.get(previous_day.trade_date)
+            if pending_signal is not None and next_signal is not None:
+                raise RebalanceLoopError(
+                    "new signal arrived while prior exit is pending"
+                )
+
+            if pending_signal is not None:
+                signal_date, desired_symbols = pending_signal
+            elif next_signal is not None:
+                signal_date = previous_day.trade_date
+                desired_symbols = tuple(next_signal)
+            else:
+                signal_date = None
+                desired_symbols = None
+
+            if signal_date is not None and desired_symbols is not None:
                 execution = _execute_signal(
-                    signal_date=previous_day.trade_date,
+                    signal_date=signal_date,
                     desired_symbols=desired_symbols,
                     current_state=state,
                     execution_bars=day,
                     max_positions=max_positions,
                     slippage_rate=slippage_rate,
+                    untradeable_symbols=untradeable.get(day.trade_date, ()),
                 )
                 state = state.apply_fills(execution.costs.portfolio_fills)
                 executions.append(execution)
+                pending_signal = (
+                    (signal_date, tuple(desired_symbols))
+                    if execution.unfilled_exit_symbols
+                    else None
+                )
 
         snapshots.append(state.mark_to_market(day.trade_date, day))
 
@@ -99,7 +128,8 @@ def run_rebalance_loop(
             signal_date
             for signal_date in sorted(signals)
             if signal_date == days[-1].trade_date
-        ),
+        )
+        + (() if pending_signal is None else (pending_signal[0],)),
     )
 
 
@@ -111,14 +141,17 @@ def _execute_signal(
     execution_bars: DailyBars,
     max_positions: int,
     slippage_rate: Decimal | str | int,
+    untradeable_symbols: Iterable[str] = (),
 ) -> RebalanceExecution:
     plan = plan_rebalance_orders(
         signal_date=signal_date,
         current_state=current_state,
         desired_symbols=desired_symbols,
     )
+    unfilled_exit_symbols = _unfilled_exit_symbols(plan, untradeable_symbols)
+    executable_plan = _executable_plan(plan, unfilled_exit_symbols)
     sized_orders = size_rebalance_orders(
-        plan=plan,
+        plan=executable_plan,
         current_state=current_state,
         execution_bars=execution_bars,
         max_positions=max_positions,
@@ -134,6 +167,7 @@ def _execute_signal(
         plan=plan,
         sized_orders=sized_orders,
         costs=costs,
+        unfilled_exit_symbols=unfilled_exit_symbols,
     )
 
 
@@ -146,3 +180,47 @@ def _validate_unique_days(days: tuple[DailyBars, ...]) -> None:
         seen.add(day.trade_date)
     if duplicates:
         raise RebalanceLoopError(f"duplicate backtest days: {duplicates}")
+
+
+def _untradeable_by_date(
+    values: Mapping[date, Iterable[str]] | None,
+) -> dict[date, tuple[str, ...]]:
+    if values is None:
+        return {}
+    return {trade_date: _symbols(symbols) for trade_date, symbols in values.items()}
+
+
+def _unfilled_exit_symbols(
+    plan: RebalancePlan, untradeable_symbols: Iterable[str]
+) -> tuple[str, ...]:
+    blocked = set(_symbols(untradeable_symbols))
+    return tuple(order.symbol for order in plan.exit_orders if order.symbol in blocked)
+
+
+def _executable_plan(
+    plan: RebalancePlan, unfilled_exit_symbols: tuple[str, ...]
+) -> RebalancePlan:
+    if not unfilled_exit_symbols:
+        return plan
+
+    blocked = set(unfilled_exit_symbols)
+    return RebalancePlan(
+        signal_date=plan.signal_date,
+        desired_symbols=plan.desired_symbols,
+        orders=tuple(
+            order
+            for order in plan.orders
+            if order.side is FillSide.SELL and order.symbol not in blocked
+        ),
+    )
+
+
+def _symbols(values: Iterable[str]) -> tuple[str, ...]:
+    return tuple(_symbol(value) for value in values)
+
+
+def _symbol(value: str) -> str:
+    symbol = value.strip().upper() if isinstance(value, str) else ""
+    if not symbol:
+        raise ValueError("symbol must be non-blank")
+    return symbol
