@@ -997,6 +997,45 @@ backtest execution, reporting, and all Phase 1 trade-log diagnostics.
 
 ---
 
+## D-048 — Rebalance execution loop consumes precomputed desired symbols
+
+**Date:** 31 August 2026
+**Status:** Accepted
+
+**Old rule:** The repository had separate layers for daily portfolio
+accounting, costed execution fills, momentum ranking signals, rebalance plans,
+and order sizing. There was still no small boundary proving that a close(T)
+desired-symbol list executes on the next available session using the current
+portfolio state.
+
+**New rule:** The rebalance execution loop consumes daily bars plus a
+precomputed mapping of signal date to desired symbols. For each ordinary
+session, it executes the prior session's desired-symbol list at the current
+session open by calling the existing rebalance planner, order sizer, and
+execution-cost adapter, then marks NAV at that session's close.
+
+Signals scheduled for dates absent from the daily bar series halt the loop.
+Signals on the final supplied session are recorded as unexecuted because there
+is no next-session open inside the supplied data. This slice does not generate
+signals, choose universe members, run B001 on the frozen dataset, compare the
+benchmark, enforce turnover gates, or produce final reports.
+
+**Evidence:** New tests cover next-session execution timing, current-state use
+for later rebalance plans, final-session unexecuted signals, unknown signal-date
+rejection, duplicate daily-date rejection, and empty input rejection.
+
+**Reason:** The backtest should connect the already-tested layers without
+turning the first integrated step into a full strategy result. Keeping the loop
+input as precomputed desired symbols makes the execution timing and accounting
+boundary auditable before B001/B002/B003 are run.
+
+**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
+backtest execution, reporting, and all Phase 1 trade-log diagnostics.
+
+**Rerun required:** No strategy run exists yet.
+
+---
+
 ## D-047 — Rebalance sizing uses next-session opens and affordability checks
 
 **Date:** 31 August 2026
