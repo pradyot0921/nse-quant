@@ -1125,3 +1125,40 @@ execution.
 backtest execution, reporting, and all Phase 1 turnover diagnostics.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-050 — Trade-log rows expose allocated fill-level costs
+
+**Date:** 31 August 2026
+**Status:** Accepted
+
+**Old rule:** D-013 defined fill-level charges as reporting allocations that
+must sum back to authoritative daily totals, and D-044 created costed execution
+fills. The repository still had no reporting row that exposed each executed
+fill with every allocated cost component itemised.
+
+**New rule:** The trade-log reporting layer renders `ExecutionCostResult`
+objects into immutable `TradeLogRow` records. Each row contains the executed
+fill date, sequence, symbol, side, quantity, price, turnover, every allocated
+cost component, total allocated cost, and the allocation note.
+
+Trade-log rows are reporting views only. They do not replace the authoritative
+daily cost totals and must retain the allocation note stating that the daily
+total is authoritative.
+
+This slice does not write CSV files, calculate performance metrics, compare
+the benchmark, enforce turnover gates, run B001, or produce final reports.
+
+**Evidence:** New tests cover itemised component rows, ordering across fills and
+trade dates, empty executions, mismatch rejection, and component sums back to
+the execution's authoritative daily cost totals.
+
+**Reason:** Phase 1 requires itemised trade logs and at least one manual trade
+reconciliation. Rendering rows directly from existing execution allocations
+keeps reporting separate from accounting while making each fill auditable.
+
+**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
+reporting, manual reconciliation, and all Phase 1 trade-log diagnostics.
+
+**Rerun required:** No strategy run exists yet.
