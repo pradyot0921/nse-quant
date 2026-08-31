@@ -1205,3 +1205,43 @@ backtest execution, manual reconciliation, reporting, and all Phase 1
 trade-log diagnostics.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-052 — Synthetic three-trade hand reconciliation before B001
+
+**Date:** 31 August 2026
+**Status:** Accepted
+
+**Old rule:** Phase 1 required a mandatory three-trade hand test and at least
+one manually reconciled trade, but the repository had only component-level
+tests for sizing, execution costs, trade-log rows, day-loop snapshots,
+unfilled-exit retry, and turnover counting.
+
+**New rule:** Before B001 runs, the repository must contain a synthetic
+three-trade reconciliation fixture that crosses those accounting layers in one
+test. The fixture must hard-code the expected fills, itemised allocated costs,
+cash balances, holdings values, final NAV, unfilled-exit retry behaviour,
+affordability resizing, and completed round-trip count.
+
+The synthetic fixture is an acceptance check for the backtest accounting path.
+It does not replace the later real broker contract-note or funds-statement
+reconciliation.
+
+**Evidence:** `docs/validation/THREE_TRADE_HAND_RECONCILIATION_V0.md` records
+the scenario and expected values. The new test executes three fills across a
+five-session toy run: buy `AAA`, retry and complete a full `AAA` exit after one
+unfilled session, then buy `BBB` after affordability resizing from 10 reference
+shares to 9 executable shares. The final NAV is `1098.08`, total turnover is
+`3073.16`, and the completed round-trip count is 1.
+
+**Reason:** Phase 1 should prove cash, fees, holdings, NAV, trade-log
+allocations, retry semantics, and turnover counting together before strategy
+results exist. Keeping the fixture synthetic avoids using B001 data while still
+making the arithmetic reviewable by hand.
+
+**Affected experiments:** Backtest execution, portfolio accounting, reporting,
+B001, B001-S015, B002, B002-S015, B003, B003-S015, and all Phase 1 manual
+reconciliation checks.
+
+**Rerun required:** No strategy run exists yet.
