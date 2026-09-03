@@ -122,3 +122,4 @@ def test_unrun_experiment_result_columns_remain_blank():
         if row["experiment_id"] in {"B001", "B002", "B003"}:
             continue
         assert all(row[column] == "" for column in result_columns)
+

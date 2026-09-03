@@ -1670,3 +1670,54 @@ validation after research rejection would weaken the one-time holdout protocol.
 and B003-S015 remain unrun under the current protocol.
 
 **Rerun required:** No.
+
+---
+
+## D-063 — Phase 2 begins with a locked B004 specification
+
+**Date:** 3 September 2026
+**Status:** Accepted
+
+**Old rule:** Phase 1 was closed with no promoted strategy, and any next
+candidate required a new experiment ID and pre-registration before execution.
+
+**New rule:** Phase 2 starts with `docs/PHASE_2_RESEARCH_SPEC.md` as the
+locked Stage 2.0 specification. `B004` is registered as the first Phase 2
+baseline candidate, and `B004-S015` is registered as its higher-slippage
+robustness row. Both are `PLANNED`; no Phase 2 strategy result exists yet.
+
+Phase 2 has a hard cap of three baseline candidates: `B004`, `B005`, and
+`B006`. `B004` consumes the first slot. The cap cannot be increased after
+seeing Phase 2 results.
+
+`B004` tests a weekly relative-momentum-with-hysteresis strategy with an
+externally specified 200-session Nifty 100 TRI market-trend filter. The rule is
+pre-registered before diagnosis, implementation, or execution:
+
+```text
+RISK_ON  if TRI(T) > SMA200(T)
+RISK_OFF if TRI(T) <= SMA200(T)
+```
+
+No alternative SMA length, threshold, cadence, position count, entry rank, hold
+rank, or slippage assumption may be previewed and substituted into `B004`.
+
+`B004-S015` may run only if `B004` passes every baseline promotion gate. It is
+not a rescue trial and does not authorize validation access.
+
+**Evidence:** `docs/PHASE_2_RESEARCH_SPEC.md` records the Phase 2 boundary,
+trial cap, B004 rules, B004-S015 robustness condition, promotion gates, and
+holdout prohibition. `experiments/ledger.csv` records `B004` and `B004-S015` as
+`PLANNED`.
+
+**Reason:** Phase 1 rejected concentrated large-cap momentum before validation.
+Phase 2 therefore needs a separate, externally motivated candidate with fixed
+rules and a trial cap before any research-period strategy performance is
+generated.
+
+**Affected experiments:** `B004` and `B004-S015` directly. `B001`, `B002`, and
+`B003` remain rejected. `B001-S015`, `B002-S015`, and `B003-S015` remain unrun
+and are not rescue trials.
+
+**Rerun required:** No. This decision registers planned Phase 2 work only; it
+does not run a strategy.

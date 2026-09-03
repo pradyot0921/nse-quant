@@ -90,3 +90,6 @@ Any new strategy, risk overlay, universe change, rebalance rule, cost
 assumption, or parameter choice must receive a new experiment ID and be
 pre-registered before execution. The validation holdout remains sealed until a
 genuinely new candidate passes its own research-period gates.
+
+Use `docs/validation/PHASE2_HYPOTHESIS_INTAKE_TEMPLATE.md` as the intake
+checklist before creating any new post-Phase 1 pre-registration artifact.
