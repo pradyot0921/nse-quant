@@ -5,14 +5,14 @@
 **Objective:** Produce one fully reconciled end-to-end research/backtest path  
 **Starting capital:** ₹50,000 simulated  
 **Market:** NSE cash equity delivery  
-**Status:** ENGINEERING VERTICAL SLICE COMPLETE; BASELINE RESEARCH CYCLE CONCLUDED; FORMAL CLOSEOUT PENDING  
+**Status:** ENGINEERING VERTICAL SLICE COMPLETE; BASELINE RESEARCH CYCLE CONCLUDED; FORMAL CLOSEOUT COMPLETE  
 **Last updated:** 3 September 2026
 
 Status note: B001, B002, and B003 have been run on the pre-registered
 research period and all three were rejected before validation. The validation
-holdout remains uninspected. Formal Phase 1 closeout is still pending the
-remaining acceptance/documentation items recorded in
-`docs/validation/PHASE1_CLOSEOUT_STATUS_V0.md`.
+holdout remains uninspected. Repo-owned Phase 1 closeout is recorded in
+`docs/validation/PHASE1_FINAL_CLOSEOUT_V0.md`. Real broker reconciliation
+remains conditional on a suitable external record becoming available.
 
 ---
 
