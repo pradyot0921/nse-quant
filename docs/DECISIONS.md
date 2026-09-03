@@ -1324,3 +1324,41 @@ ledger makes the run inputs ambiguous and weakens the record before B001.
 and all Phase 1 report/ledger artifacts.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-055 — Phase 1 reports print frozen inputs, gates, and warnings
+
+**Date:** 2 September 2026
+**Status:** Accepted
+
+**Old rule:** The repository could calculate aligned performance metrics,
+turnover, execution costs, and trade-log rows, but it had no single report
+artifact that rendered the required Phase 1 identity fields, benchmark-relative
+drawdown gate, turnover gate, and research warnings.
+
+**New rule:** V0 writes deterministic Markdown reports for Phase 1 experiment
+summaries. The report must print the experiment ID, strategy name, universe
+version, data version, aligned period, portfolio metrics, benchmark metrics,
+relative CAGR/drawdown comparison, drawdown gate status, turnover gate status,
+transaction costs, and the required research warnings.
+
+This slice is a report writer only. It does not run B001/B002/B003, update the
+experiment ledger result fields, write trade-log CSV files, calculate holding
+period or win/loss diagnostics, or decide whether a strategy is eligible for
+paper/live promotion.
+
+**Evidence:** New tests cover the generated Markdown sections, frozen input
+versions, portfolio and benchmark metric rendering, CAGR difference, drawdown
+gate PASS/FAIL rendering, turnover gate rendering, transaction-cost totals,
+default research warnings, and notes.
+
+**Reason:** Final reports must be prepared before strategy results exist so
+the warning labels and pass/fail surfaces are not chosen after seeing B001.
+Keeping the writer small lets later runner code feed it already-computed
+metrics without hiding new calculations in presentation code.
+
+**Affected experiments:** Reporting, B001, B001-S015, B002, B002-S015, B003,
+B003-S015, and all Phase 1 result artifacts.
+
+**Rerun required:** No strategy run exists yet.
