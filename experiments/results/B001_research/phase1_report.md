@@ -17,14 +17,30 @@
 | --- | ---: |
 | Starting capital | 50000.00 |
 | Ending capital | 153653.80 |
+| Gross P&L | 125359.32 |
+| Transaction costs | 21705.52 |
+| Slippage model | adverse deterministic slippage 0.05% baseline |
+| Net P&L | 103653.80 |
 | Net return | 2.073076 |
 | CAGR | 0.173960 |
 | Volatility | 0.249862 |
+| Sharpe | 0.781757 |
+| Sortino | 0.745200 |
+| Calmar | 0.372801 |
 | Maximum drawdown | 0.466630 |
-| Transaction costs | 21705.52 |
+| Cost drag | 0.434110 |
 | Completed round trips | 270 |
 | Turnover | 15779748.63 |
 | Turnover gate | FAIL |
+| Completed trades with P&L | 270 |
+| Average holding period days | 26.781481 |
+| Percentage time invested | 0.964079 |
+| Win rate | 0.485185 |
+| Profit factor | 1.376502 |
+| Average winning trade | 2068.07 |
+| Average losing trade | -1415.94 |
+| Average win / average loss ratio | 1.460563 |
+| Expectancy per completed trade | 274.45 |
 
 ## Benchmark
 
@@ -35,6 +51,9 @@
 | Benchmark return | 1.456728 |
 | Benchmark CAGR | 0.137013 |
 | Benchmark volatility | 0.175367 |
+| Benchmark Sharpe | 0.837396 |
+| Benchmark Sortino | 0.767109 |
+| Benchmark Calmar | 0.361294 |
 | Benchmark maximum drawdown | 0.379228 |
 
 ## Relative
@@ -43,6 +62,11 @@
 | --- | ---: |
 | CAGR difference | 0.036947 |
 | Drawdown difference | 0.087402 |
+| Drawdown difference percentage points | 8.740200 |
+| Drawdown worsening relative to benchmark | 0.230473 |
+| Sharpe difference | -0.055639 |
+| Sortino difference | -0.021909 |
+| Calmar difference | 0.011507 |
 | Drawdown gate | FAIL |
 
 ## Research Warnings

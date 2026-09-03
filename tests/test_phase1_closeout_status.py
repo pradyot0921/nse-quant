@@ -24,4 +24,6 @@ def test_phase1_status_documents_reflect_research_stop():
     assert "| B002 research run | Rejected |" in closeout
     assert "| B003 research run | Rejected |" in closeout
     assert "| Validation holdout | Uninspected |" in closeout
+    assert "| Phase 1 report statistics | Complete |" in closeout
+    assert "gross/net P&L, slippage model, Sharpe, Sortino, Calmar" in closeout
     assert "no Phase 1 strategy candidate eligible for validation promotion" in closeout
