@@ -533,7 +533,8 @@ The following must be reported even where they are not separate promotion gates:
 - number of market-regime state changes;
 - percentage of research sessions classified risk-on/risk-off once the SMA200 is available;
 - stock contribution concentration;
-- calendar-year contribution concentration.
+- calendar-year contribution concentration;
+- direct B004-versus-B003 comparison using the same research period, universe, dataset, benchmark, cost profile, and baseline slippage, including at minimum CAGR, maximum drawdown, Sharpe, turnover, transaction costs, and time invested.
 
 ### 8.9 Promotion rule
 

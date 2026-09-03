@@ -11,7 +11,7 @@ def rows():
         return tuple(csv.DictReader(handle))
 
 
-def test_phase1_ledger_references_frozen_universe_and_dataset_versions():
+def test_experiment_ledger_references_frozen_universe_and_dataset_versions():
     expected_ids = {
         "B001",
         "B001-S015",
@@ -78,7 +78,36 @@ def test_phase1_ledger_records_b003_research_result_only():
     assert "validation period not inspected" in b003["notes"]
 
 
-def test_unrun_phase1_ledger_result_columns_remain_blank():
+def test_phase2_b004_rows_are_preregistered_and_blank():
+    by_id = {row["experiment_id"]: row for row in rows()}
+    b004 = by_id["B004"]
+    robust = by_id["B004-S015"]
+
+    assert b004["status"] == "PLANNED"
+    assert b004["research_period"] == "2016-01-01..2022-12-31"
+    assert b004["validation_period"] == "2023-01-01..2026-08-19"
+    assert "SMA200" in b004["strategy"]
+    assert "risk_on=TRI>SMA200" in b004["parameters"]
+    assert "candidate 1 of maximum 3" in b004["notes"]
+
+    assert robust["status"] == "PLANNED"
+    assert robust["slippage_model"] == "adverse deterministic slippage 0.15% robustness"
+    assert "Run only if B004 passes every baseline Phase 2 promotion gate" in robust["notes"]
+
+    result_columns = (
+        "cagr",
+        "max_drawdown",
+        "sharpe",
+        "sortino",
+        "calmar",
+        "turnover",
+        "net_return",
+    )
+    assert all(b004[column] == "" for column in result_columns)
+    assert all(robust[column] == "" for column in result_columns)
+
+
+def test_unrun_experiment_result_columns_remain_blank():
     result_columns = (
         "cagr",
         "max_drawdown",
@@ -94,21 +123,3 @@ def test_unrun_phase1_ledger_result_columns_remain_blank():
             continue
         assert all(row[column] == "" for column in result_columns)
 
-
-def test_phase2_ledger_registers_b004_without_results():
-    ledger_rows = rows()
-    by_id = {row["experiment_id"]: row for row in ledger_rows}
-    b004 = by_id["B004"]
-    b004_s015 = by_id["B004-S015"]
-
-    assert b004["status"] == "PLANNED"
-    assert b004["strategy"] == "weekly relative momentum with hysteresis plus exogenous market-trend filter"
-    assert "market_regime=SMA200 on Nifty 100 TRI" in b004["parameters"]
-    assert "risk_on when TRI>SMA200" in b004["parameters"]
-    assert "risk_off when TRI<=SMA200" in b004["parameters"]
-    assert b004["slippage_model"] == "adverse deterministic slippage 0.05% baseline"
-    assert "Phase 2 baseline slot 1 of 3" in b004["notes"]
-    assert "Validation holdout remains sealed" in b004["notes"]
-    assert b004_s015["status"] == "PLANNED"
-    assert b004_s015["slippage_model"] == "adverse deterministic slippage 0.15% robustness"
-    assert "Run only if B004 passes every baseline promotion gate" in b004_s015["notes"]
