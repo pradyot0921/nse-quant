@@ -14,7 +14,11 @@ from nse_quant.backtest.rebalance_loop import RebalanceLoopResult, run_rebalance
 from nse_quant.backtest.turnover import TurnoverEvaluation, evaluate_round_trip_turnover
 from nse_quant.data.benchmark import TriBenchmarkBar
 from nse_quant.reporting.performance import PerformanceSummary, summarize_performance
-from nse_quant.strategies.momentum import MomentumSignal, generate_weekly_momentum_signals
+from nse_quant.strategies.momentum import (
+    MomentumSignal,
+    generate_weekly_hysteresis_momentum_signals,
+    generate_weekly_momentum_signals,
+)
 
 
 class Phase1ExperimentError(RuntimeError):
@@ -48,7 +52,6 @@ def run_weekly_momentum_experiment(
 ) -> Phase1ExperimentRun:
     """Run weekly momentum signals through the existing Phase 1 components."""
 
-    clean_experiment_id = _experiment_id(experiment_id)
     days = tuple(daily_bars)
     signals = generate_weekly_momentum_signals(
         days,
@@ -56,6 +59,76 @@ def run_weekly_momentum_experiment(
         lookback_sessions=lookback_sessions,
         max_positions=max_positions,
     )
+    return _run_from_signals(
+        experiment_id=experiment_id,
+        daily_bars=days,
+        benchmark_bars=benchmark_bars,
+        signals=signals,
+        starting_cash=starting_cash,
+        max_positions=max_positions,
+        slippage_rate=slippage_rate,
+        complete_years=complete_years,
+        annual_turnover_limit=annual_turnover_limit,
+        untradeable_symbols_by_date=untradeable_symbols_by_date,
+    )
+
+
+def run_weekly_hysteresis_momentum_experiment(
+    *,
+    experiment_id: str,
+    daily_bars: Iterable[DailyBars],
+    benchmark_bars: Iterable[TriBenchmarkBar],
+    universe: Iterable[str],
+    starting_cash: Decimal | str | int,
+    lookback_sessions: int = 60,
+    max_positions: int = 3,
+    entry_rank: int = 3,
+    hold_rank: int = 6,
+    slippage_rate: Decimal | str | int = Decimal("0.0005"),
+    complete_years: Iterable[int] = (),
+    annual_turnover_limit: int = 30,
+    untradeable_symbols_by_date: Mapping[date, Iterable[str]] | None = None,
+) -> Phase1ExperimentRun:
+    """Run weekly momentum with pre-registered B003 hysteresis thresholds."""
+
+    days = tuple(daily_bars)
+    signals = generate_weekly_hysteresis_momentum_signals(
+        days,
+        universe=universe,
+        lookback_sessions=lookback_sessions,
+        max_positions=max_positions,
+        entry_rank=entry_rank,
+        hold_rank=hold_rank,
+    )
+    return _run_from_signals(
+        experiment_id=experiment_id,
+        daily_bars=days,
+        benchmark_bars=benchmark_bars,
+        signals=signals,
+        starting_cash=starting_cash,
+        max_positions=max_positions,
+        slippage_rate=slippage_rate,
+        complete_years=complete_years,
+        annual_turnover_limit=annual_turnover_limit,
+        untradeable_symbols_by_date=untradeable_symbols_by_date,
+    )
+
+
+def _run_from_signals(
+    *,
+    experiment_id: str,
+    daily_bars: Iterable[DailyBars],
+    benchmark_bars: Iterable[TriBenchmarkBar],
+    signals: tuple[MomentumSignal, ...],
+    starting_cash: Decimal | str | int,
+    max_positions: int,
+    slippage_rate: Decimal | str | int,
+    complete_years: Iterable[int],
+    annual_turnover_limit: int,
+    untradeable_symbols_by_date: Mapping[date, Iterable[str]] | None,
+) -> Phase1ExperimentRun:
+    clean_experiment_id = _experiment_id(experiment_id)
+    days = tuple(daily_bars)
     if not signals:
         raise Phase1ExperimentError("no weekly momentum signals generated")
 

@@ -8,6 +8,7 @@ from nse_quant.backtest.portfolio import FillSide
 from nse_quant.data.benchmark import NIFTY100_TRI_NAME, TriBenchmarkBar
 from nse_quant.experiments.phase1 import (
     Phase1ExperimentError,
+    run_weekly_hysteresis_momentum_experiment,
     run_weekly_momentum_experiment,
 )
 
@@ -104,6 +105,53 @@ def test_weekly_momentum_experiment_wires_signals_backtest_turnover_and_performa
     assert result.performance.end_date == dates[-1]
     assert result.performance.observations == len(dates)
     assert result.backtest.unexecuted_signal_dates == (dates[4],)
+
+
+def test_weekly_hysteresis_experiment_uses_hold_threshold():
+    dates = [
+        date(2026, 1, 1),
+        date(2026, 1, 2),
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+        date(2026, 1, 12),
+    ]
+    daily_bars = [
+        day(dates[0], {"AAA": ("100", "100"), "BBB": ("100", "100"), "CCC": ("100", "100")}),
+        day(dates[1], {"AAA": ("110", "110"), "BBB": ("100", "100"), "CCC": ("100", "100")}),
+        day(dates[2], {"AAA": ("112", "112"), "BBB": ("100", "100"), "CCC": ("100", "100")}),
+        day(dates[3], {"AAA": ("100", "100"), "BBB": ("120", "120"), "CCC": ("80", "80")}),
+        day(dates[4], {"AAA": ("90", "90"), "BBB": ("130", "130"), "CCC": ("100", "100")}),
+    ]
+
+    result = run_weekly_hysteresis_momentum_experiment(
+        experiment_id="B003",
+        daily_bars=daily_bars,
+        benchmark_bars=[
+            benchmark(dates[0], "1000"),
+            benchmark(dates[1], "1005"),
+            benchmark(dates[2], "1010"),
+            benchmark(dates[3], "1015"),
+            benchmark(dates[4], "1020"),
+        ],
+        universe=["AAA", "BBB", "CCC"],
+        starting_cash="10000",
+        lookback_sessions=1,
+        max_positions=1,
+        entry_rank=1,
+        hold_rank=2,
+        slippage_rate="0",
+        complete_years=[2026],
+    )
+
+    assert [signal.desired_symbols for signal in result.signals] == [
+        ("AAA",),
+        ("AAA",),
+        ("CCC",),
+    ]
+    assert [(fill.side, fill.symbol) for fill in result.fills] == [
+        (FillSide.BUY, "AAA"),
+    ]
+    assert result.turnover.total_completed_round_trips == 0
 
 
 def test_weekly_momentum_experiment_rejects_blank_id():

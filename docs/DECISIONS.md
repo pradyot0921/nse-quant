@@ -1489,3 +1489,38 @@ on B001.
 pre-registered response once hysteresis execution is implemented.
 
 **Rerun required:** No prior B001 result exists.
+
+---
+
+## D-059 — B003 hysteresis runner uses frozen entry and hold ranks
+
+**Date:** 3 September 2026
+**Status:** Accepted
+
+**Old rule:** B003 was pre-registered as the turnover-response candidate after
+B001, but the codebase only supported simple top-N weekly momentum signals.
+The Phase 1 run script intentionally refused B003 because no hysteresis runner
+existed yet.
+
+**New rule:** V0 supports B003 as weekly momentum with deterministic
+hysteresis. On each weekly signal date, the runner keeps previously desired
+symbols while their current rank is 6 or better, exits symbols ranked below 6
+or ineligible, and fills available slots only from symbols ranked 3 or better.
+The maximum position count remains 3.
+
+The implementation adds support only for the already pre-registered B003 and
+B003-S015 parameter sets. It does not run either real experiment or inspect the
+validation period.
+
+**Evidence:** New tests cover the hysteresis signal rule holding a name that
+falls from entry rank to hold rank, exiting once the hold rank is broken,
+running the hysteresis experiment wrapper, and routing B003 through the Phase 1
+run script.
+
+**Reason:** B001 failed the research-period turnover gate, so B003 is the next
+pre-registered response. The B003 execution path must exist and be tested
+before any real B003 result is generated.
+
+**Affected experiments:** B003 and B003-S015 directly. B001 remains rejected.
+
+**Rerun required:** No B003 result exists yet.

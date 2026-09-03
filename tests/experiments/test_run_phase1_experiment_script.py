@@ -76,15 +76,53 @@ def test_run_phase1_experiment_script_writes_report_and_trade_log(tmp_path):
     assert "BBB,BUY" in trade_log.read_text(encoding="utf-8")
 
 
-def test_run_phase1_experiment_script_rejects_b003_until_hysteresis_exists(tmp_path):
+def test_run_phase1_experiment_script_supports_b003_hysteresis(tmp_path):
     script = load_script()
+    ledger = tmp_path / "ledger.csv"
+    universe = tmp_path / "universe.csv"
+    dataset = tmp_path / "dataset.csv"
+    benchmark = tmp_path / "benchmark.csv"
+    output_dir = tmp_path / "results"
+    sessions = _weekday_sessions(date(2016, 1, 1), 65)
 
-    try:
-        script.main(["--experiment-id", "B003", "--period", "research"])
-    except SystemExit as exc:
-        assert "hysteresis runner" in str(exc)
-    else:
-        raise AssertionError("B003 should not run through the B001/B002 runner")
+    ledger.write_text(
+        "\n".join(
+            [
+                "experiment_id,strategy,universe_version,data_version,research_period,validation_period",
+                (
+                    "B003,weekly momentum with hysteresis,u_v0,d_v0,"
+                    f"{sessions[0]}..{sessions[-1]},2016-04-01..2016-04-04"
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    universe.write_text("symbol\nAAA\nBBB\n", encoding="utf-8")
+    dataset.write_text(_dataset_csv(sessions), encoding="utf-8")
+    benchmark.write_text(_benchmark_csv(sessions), encoding="utf-8")
+
+    exit_code = script.main(
+        [
+            "--experiment-id",
+            "B003",
+            "--period",
+            "research",
+            "--ledger",
+            str(ledger),
+            "--universe",
+            str(universe),
+            "--dataset",
+            str(dataset),
+            "--benchmark",
+            str(benchmark),
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+
+    assert exit_code == 0
+    report = output_dir / "B003_research" / "phase1_report.md"
+    assert "| Experiment | `B003` |" in report.read_text(encoding="utf-8")
 
 
 def _weekday_sessions(start: date, count: int) -> list[date]:

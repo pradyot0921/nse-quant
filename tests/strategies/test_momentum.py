@@ -6,6 +6,7 @@ import pytest
 from nse_quant.backtest.data import BacktestBar, DailyBars
 from nse_quant.strategies.momentum import (
     MomentumSignalError,
+    generate_weekly_hysteresis_momentum_signals,
     generate_weekly_momentum_signals,
 )
 
@@ -136,6 +137,43 @@ def test_momentum_ties_break_by_symbol():
     assert signals[0].desired_symbols == ("AAA", "BBB")
 
 
+def test_weekly_hysteresis_holds_until_hold_rank_breaks():
+    dates = [
+        date(2026, 1, 1),
+        date(2026, 1, 2),
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+        date(2026, 1, 12),
+    ]
+    daily = [
+        day(dates[0], {"AAA": "100", "BBB": "100", "CCC": "100"}),
+        day(dates[1], {"AAA": "110", "BBB": "100", "CCC": "100"}),
+        day(dates[2], {"AAA": "112", "BBB": "100", "CCC": "100"}),
+        day(dates[3], {"AAA": "100", "BBB": "120", "CCC": "80"}),
+        day(dates[4], {"AAA": "90", "BBB": "130", "CCC": "100"}),
+    ]
+
+    signals = generate_weekly_hysteresis_momentum_signals(
+        daily,
+        universe=["AAA", "BBB", "CCC"],
+        lookback_sessions=1,
+        max_positions=1,
+        entry_rank=1,
+        hold_rank=2,
+    )
+
+    assert [signal.signal_date for signal in signals] == [
+        dates[1],
+        dates[3],
+        dates[4],
+    ]
+    assert [signal.desired_symbols for signal in signals] == [
+        ("AAA",),
+        ("AAA",),
+        ("CCC",),
+    ]
+
+
 def test_momentum_rejects_invalid_inputs():
     with pytest.raises(MomentumSignalError, match="universe is empty"):
         generate_weekly_momentum_signals([], universe=[])
@@ -148,6 +186,14 @@ def test_momentum_rejects_invalid_inputs():
 
     with pytest.raises(TypeError, match="lookback_sessions"):
         generate_weekly_momentum_signals([], universe=["AAA"], lookback_sessions=5.0)
+
+    with pytest.raises(ValueError, match="entry_rank"):
+        generate_weekly_hysteresis_momentum_signals(
+            [],
+            universe=["AAA"],
+            entry_rank=7,
+            hold_rank=6,
+        )
 
 
 def test_momentum_rejects_duplicate_daily_dates():
