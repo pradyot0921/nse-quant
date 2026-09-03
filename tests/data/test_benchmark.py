@@ -8,6 +8,7 @@ from nse_quant.data.benchmark import (
     BenchmarkDataError,
     NIFTY100_TRI_NAME,
     fetch_nifty_tri_response,
+    load_tri_benchmark_csv,
     parse_nifty_tri_response,
     validate_benchmark_sessions,
     write_benchmark_validation_report,
@@ -148,3 +149,22 @@ def test_write_tri_benchmark_csv_and_report(tmp_path):
     text = report_output.read_text(encoding="utf-8")
     assert "| Benchmark rows | 1 |" in text
     assert "Total returns Index Values" in text
+
+
+def test_load_tri_benchmark_csv_round_trips_saved_bars(tmp_path):
+    bars = parse_nifty_tri_response(
+        response(
+            [
+                row(Date="05 Jan 2016", TotalReturnsIndex="1001.00"),
+                row(Date="04 Jan 2016", TotalReturnsIndex="1000.50"),
+            ]
+        )
+    )
+    csv_output = write_tri_benchmark_csv(bars, tmp_path / "benchmark.csv")
+
+    loaded = load_tri_benchmark_csv(csv_output)
+
+    assert [bar.trade_date for bar in loaded] == [date(2016, 1, 4), date(2016, 1, 5)]
+    assert loaded[0].index_name == NIFTY100_TRI_NAME
+    assert loaded[0].total_return_index == Decimal("1000.50")
+    assert loaded[0].net_total_return_index == Decimal("990.25")

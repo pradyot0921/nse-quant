@@ -13,6 +13,7 @@ from nse_quant.reporting.trade_log import (
     TradeLogError,
     TradeLogRow,
     trade_log_rows_from_execution,
+    write_trade_log_csv,
 )
 
 __all__ = [
@@ -23,5 +24,6 @@ __all__ = [
     "TradeLogRow",
     "summarize_performance",
     "write_phase1_markdown_report",
+    "write_trade_log_csv",
     "trade_log_rows_from_execution",
 ]

@@ -5,6 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
+from typing import Iterable
+import csv
 
 from nse_quant.backtest.execution import ExecutionCostResult
 from nse_quant.backtest.portfolio import FillSide, PortfolioFill
@@ -76,6 +79,61 @@ def trade_log_rows_from_execution(
         )
 
     return tuple(sorted(rows, key=_row_key))
+
+
+def write_trade_log_csv(
+    rows: Iterable[TradeLogRow],
+    output_path: str | Path,
+) -> Path:
+    """Write allocated fill-level trade-log rows to CSV."""
+
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "trade_date",
+        "sequence",
+        "symbol",
+        "side",
+        "quantity",
+        "price",
+        "turnover",
+        "brokerage",
+        "stt_buy",
+        "stt_sell",
+        "exchange_transaction_charge",
+        "sebi_turnover_charge",
+        "gst",
+        "stamp_duty",
+        "dp_charges",
+        "total_cost",
+        "allocation_note",
+    ]
+    with output.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in sorted(rows, key=_row_key):
+            writer.writerow(
+                {
+                    "trade_date": row.trade_date.isoformat(),
+                    "sequence": row.sequence,
+                    "symbol": row.symbol,
+                    "side": row.side.value,
+                    "quantity": row.quantity,
+                    "price": str(row.price),
+                    "turnover": str(row.turnover),
+                    "brokerage": str(row.brokerage),
+                    "stt_buy": str(row.stt_buy),
+                    "stt_sell": str(row.stt_sell),
+                    "exchange_transaction_charge": str(row.exchange_transaction_charge),
+                    "sebi_turnover_charge": str(row.sebi_turnover_charge),
+                    "gst": str(row.gst),
+                    "stamp_duty": str(row.stamp_duty),
+                    "dp_charges": str(row.dp_charges),
+                    "total_cost": str(row.total_cost),
+                    "allocation_note": row.allocation_note,
+                }
+            )
+    return output
 
 
 def _validate_alignment(

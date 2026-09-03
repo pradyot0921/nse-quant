@@ -12,6 +12,7 @@ from nse_quant.backtest.portfolio import FillSide
 from nse_quant.reporting.trade_log import (
     TradeLogError,
     trade_log_rows_from_execution,
+    write_trade_log_csv,
 )
 
 
@@ -101,6 +102,21 @@ def test_trade_log_empty_execution_has_no_rows():
     execution = build_portfolio_fills_with_costs([])
 
     assert trade_log_rows_from_execution(execution) == ()
+
+
+def test_write_trade_log_csv_preserves_itemised_rows(tmp_path):
+    execution = build_portfolio_fills_with_costs(
+        [request(date(2026, 8, 19), 1, "AAA", FillSide.BUY, 1, "100")],
+        slippage_rate="0",
+    )
+    rows = trade_log_rows_from_execution(execution)
+
+    output = write_trade_log_csv(rows, tmp_path / "trade_log.csv")
+
+    text = output.read_text(encoding="utf-8")
+    assert "trade_date,sequence,symbol,side,quantity" in text
+    assert "2026-08-19,1,AAA,BUY,1,100.00" in text
+    assert "REPORTING ALLOCATION; DAILY TOTAL IS AUTHORITATIVE" in text
 
 
 def test_trade_log_rejects_mismatched_fills_and_allocations():

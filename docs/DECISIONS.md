@@ -1400,3 +1400,39 @@ auditable and reproducible from explicitly supplied frozen inputs.
 and all Phase 1 result-generation scripts.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-057 — Phase 1 run script writes artifacts but not ledger results
+
+**Date:** 3 September 2026
+**Status:** Accepted
+
+**Old rule:** The pure Phase 1 runner could execute weekly momentum experiments
+from supplied objects, but the repository had no command that loaded the frozen
+processed dataset, frozen universe, and saved Nifty 100 TRI benchmark into that
+runner.
+
+**New rule:** V0 adds a small Phase 1 run script for supported B001/B002-style
+weekly momentum experiments. The script reads frozen local input files, selects
+either the research period or validation period from the ledger row, runs the
+pure experiment runner, and writes a Markdown report plus allocated trade-log
+CSV under the selected output directory.
+
+The script does not update `experiments/ledger.csv`, commit result artifacts,
+run validation automatically, or route B003 through the B001/B002 runner. B003
+requires a separate hysteresis runner before it can be executed.
+
+**Evidence:** New tests cover the script writing report and trade-log artifacts
+from small local CSV fixtures, plus rejection of B003 before hysteresis support
+exists. Benchmark and trade-log file helpers also have round-trip tests.
+
+**Reason:** Executing a Phase 1 result should require an explicit command and
+should leave the ledger untouched until the generated artifacts are reviewed.
+Separating artifact generation from ledger mutation keeps the first B001 result
+auditable and prevents accidental status/result edits during a dry run.
+
+**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
+and all Phase 1 result artifacts.
+
+**Rerun required:** No strategy run exists yet.
