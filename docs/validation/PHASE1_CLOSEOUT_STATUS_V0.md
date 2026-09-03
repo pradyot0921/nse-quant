@@ -18,7 +18,8 @@ validation holdout.
 | Corporate-action visual validation | Complete |
 | Phase 1 report statistics | Complete |
 | B001-S015, B002-S015, B003-S015 | Unrun robustness rows |
-| Formal Phase 1 closeout | Pending acceptance/documentation items |
+| Formal Phase 1 closeout | Complete |
+| Real broker reconciliation | Conditional external follow-up if a suitable record is available |
 
 ## Research Outcome
 
@@ -51,15 +52,15 @@ promotion test.
   win/loss, and expectancy fields;
 - synthetic three-trade hand reconciliation;
 - real-event corporate-action visual validation for TCS `Bonus 1:1`;
+- final Phase 1 closeout artifact stating that no strategy was promoted;
 - B001, B002, and B003 research-period results permanently recorded.
 
-## Remaining Closeout Items
+## Remaining External Evidence
 
-These items should be closed before declaring Phase 1 formally complete:
-
-- real Zerodha delivery cost reconciliation if a suitable broker record is
-  available outside the repository;
-- final Phase 1 closeout document stating that no strategy was promoted.
+Real Zerodha delivery cost reconciliation remains conditional on a suitable
+broker record becoming available outside the repository. It is not an open
+repo-owned closeout blocker because no Phase 1 strategy was promoted and no
+paper/live deployment decision is being made.
 
 ## Next Research Rule
 
