@@ -1633,3 +1633,40 @@ B001-S015, B002-S015, and B003-S015 remain unrun unless later selected under
 the pre-registered protocol.
 
 **Rerun required:** No prior B002 result exists.
+
+---
+
+## D-062 — Phase 1 research runs stop before validation
+
+**Date:** 3 September 2026
+**Status:** Accepted
+
+**Old rule:** B001, B002, and B003 were pre-registered Phase 1 research
+configurations. B001, B002, and B003 had each been run on the research period
+and recorded individually, but there was no consolidated stop decision.
+
+**New rule:** Phase 1 strategy execution stops before validation because B001,
+B002, and B003 were all rejected on research-period gates. The validation
+period remains uninspected for these configurations.
+
+The higher-slippage rows B001-S015, B002-S015, and B003-S015 remain unrun. They
+are robustness rows, not rescue trials, and do not create a validation candidate
+after the corresponding baseline research configurations have failed.
+
+**Evidence:** `docs/validation/PHASE1_RESEARCH_REVIEW_V0.md` summarizes the
+three completed research-period runs:
+
+```text
+B001: turnover gate FAIL, drawdown gate FAIL, status REJECTED
+B002: turnover gate FAIL, drawdown gate FAIL, status REJECTED
+B003: turnover gate PASS, drawdown gate FAIL, status REJECTED
+```
+
+**Reason:** The validation holdout should only be spent on a configuration that
+passes the pre-registered research-period gates. None did. Continuing to
+validation after research rejection would weaken the one-time holdout protocol.
+
+**Affected experiments:** B001, B002, and B003 directly. B001-S015, B002-S015,
+and B003-S015 remain unrun under the current protocol.
+
+**Rerun required:** No.
