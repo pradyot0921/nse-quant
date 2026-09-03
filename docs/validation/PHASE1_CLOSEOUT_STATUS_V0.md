@@ -16,6 +16,7 @@ validation holdout.
 | B003 research run | Rejected |
 | Validation holdout | Uninspected |
 | Corporate-action visual validation | Complete |
+| Phase 1 report statistics | Complete |
 | B001-S015, B002-S015, B003-S015 | Unrun robustness rows |
 | Formal Phase 1 closeout | Pending acceptance/documentation items |
 
@@ -45,6 +46,9 @@ promotion test.
 - official Nifty 100 TRI benchmark coverage;
 - Decimal portfolio accounting, cost-aware fills, T+1 execution, trade logs,
   and Phase 1 reports;
+- Phase 1 reports with gross/net P&L, slippage model, Sharpe, Sortino, Calmar,
+  cost drag, time invested, holding period, win rate, profit factor, average
+  win/loss, and expectancy fields;
 - synthetic three-trade hand reconciliation;
 - real-event corporate-action visual validation for TCS `Bonus 1:1`;
 - B001, B002, and B003 research-period results permanently recorded.
@@ -53,8 +57,6 @@ promotion test.
 
 These items should be closed before declaring Phase 1 formally complete:
 
-- additional report statistics from the original Phase 1 specification, if
-  literal report-spec completion is required;
 - real Zerodha delivery cost reconciliation if a suitable broker record is
   available outside the repository;
 - final Phase 1 closeout document stating that no strategy was promoted.

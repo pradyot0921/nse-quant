@@ -37,6 +37,12 @@ class PerformanceSummary:
     benchmark_cagr: Decimal
     strategy_annualized_volatility: Decimal
     benchmark_annualized_volatility: Decimal
+    strategy_sharpe: Decimal
+    benchmark_sharpe: Decimal
+    strategy_sortino: Decimal
+    benchmark_sortino: Decimal
+    strategy_calmar: Decimal
+    benchmark_calmar: Decimal
     strategy_max_drawdown: Decimal
     benchmark_max_drawdown: Decimal
     drawdown_gate_passed: bool
@@ -75,6 +81,10 @@ def summarize_performance(
     if elapsed_days <= 0:
         raise PerformanceReportError("performance period must span at least one day")
 
+    strategy_returns = _period_returns(nav_values)
+    benchmark_returns = _period_returns(tri_values)
+    strategy_cagr = _cagr(nav_values, elapsed_days)
+    benchmark_cagr = _cagr(tri_values, elapsed_days)
     strategy_max_drawdown = _max_drawdown(nav_values)
     benchmark_max_drawdown = _max_drawdown(tri_values)
     return PerformanceSummary(
@@ -87,10 +97,20 @@ def summarize_performance(
         benchmark_end_tri=tri_values[-1],
         strategy_total_return=_metric(_total_return(nav_values)),
         benchmark_total_return=_metric(_total_return(tri_values)),
-        strategy_cagr=_metric(_cagr(nav_values, elapsed_days)),
-        benchmark_cagr=_metric(_cagr(tri_values, elapsed_days)),
-        strategy_annualized_volatility=_metric(_annualized_volatility(nav_values)),
-        benchmark_annualized_volatility=_metric(_annualized_volatility(tri_values)),
+        strategy_cagr=_metric(strategy_cagr),
+        benchmark_cagr=_metric(benchmark_cagr),
+        strategy_annualized_volatility=_metric(
+            _annualized_volatility_from_returns(strategy_returns)
+        ),
+        benchmark_annualized_volatility=_metric(
+            _annualized_volatility_from_returns(benchmark_returns)
+        ),
+        strategy_sharpe=_metric(_sharpe(strategy_returns)),
+        benchmark_sharpe=_metric(_sharpe(benchmark_returns)),
+        strategy_sortino=_metric(_sortino(strategy_returns)),
+        benchmark_sortino=_metric(_sortino(benchmark_returns)),
+        strategy_calmar=_metric(_calmar(strategy_cagr, strategy_max_drawdown)),
+        benchmark_calmar=_metric(_calmar(benchmark_cagr, benchmark_max_drawdown)),
         strategy_max_drawdown=_metric(strategy_max_drawdown),
         benchmark_max_drawdown=_metric(benchmark_max_drawdown),
         drawdown_gate_passed=strategy_max_drawdown <= benchmark_max_drawdown,
@@ -137,7 +157,10 @@ def _cagr(values: tuple[Decimal, ...], elapsed_days: int) -> Decimal:
 
 
 def _annualized_volatility(values: tuple[Decimal, ...]) -> Decimal:
-    returns = _period_returns(values)
+    return _annualized_volatility_from_returns(_period_returns(values))
+
+
+def _annualized_volatility_from_returns(returns: tuple[Decimal, ...]) -> Decimal:
     if len(returns) < 2:
         return ZERO
     mean_return = sum(returns, ZERO) / Decimal(len(returns))
@@ -146,6 +169,38 @@ def _annualized_volatility(values: tuple[Decimal, ...]) -> Decimal:
         ZERO,
     ) / Decimal(len(returns) - 1)
     return variance.sqrt() * TRADING_SESSIONS_PER_YEAR.sqrt()
+
+
+def _annualized_mean_return(returns: tuple[Decimal, ...]) -> Decimal:
+    if not returns:
+        return ZERO
+    return (sum(returns, ZERO) / Decimal(len(returns))) * TRADING_SESSIONS_PER_YEAR
+
+
+def _sharpe(returns: tuple[Decimal, ...]) -> Decimal:
+    volatility = _annualized_volatility_from_returns(returns)
+    if volatility == ZERO:
+        return ZERO
+    return _annualized_mean_return(returns) / volatility
+
+
+def _sortino(returns: tuple[Decimal, ...]) -> Decimal:
+    downside = tuple(value for value in returns if value < ZERO)
+    if not downside:
+        return ZERO
+    downside_variance = sum((value * value for value in downside), ZERO) / Decimal(
+        len(downside)
+    )
+    downside_deviation = downside_variance.sqrt() * TRADING_SESSIONS_PER_YEAR.sqrt()
+    if downside_deviation == ZERO:
+        return ZERO
+    return _annualized_mean_return(returns) / downside_deviation
+
+
+def _calmar(cagr: Decimal, max_drawdown: Decimal) -> Decimal:
+    if max_drawdown == ZERO:
+        return ZERO
+    return cagr / max_drawdown
 
 
 def _period_returns(values: tuple[Decimal, ...]) -> tuple[Decimal, ...]:
