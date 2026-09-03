@@ -1362,3 +1362,41 @@ metrics without hiding new calculations in presentation code.
 B003-S015, and all Phase 1 result artifacts.
 
 **Rerun required:** No strategy run exists yet.
+
+---
+
+## D-056 — Phase 1 experiment runner is pure orchestration
+
+**Date:** 3 September 2026
+**Status:** Accepted
+
+**Old rule:** The repository had separate components for weekly momentum
+signals, rebalance execution, turnover counting, benchmark-relative performance
+metrics, and Phase 1 report writing, but no single function that ran the
+pre-registered weekly momentum flow end to end.
+
+**New rule:** V0 adds a pure, input-driven Phase 1 experiment runner. The
+runner accepts already-loaded daily bars, benchmark bars, universe symbols,
+cash, max-position, slippage, and turnover-limit inputs. It generates weekly
+momentum signals, runs the explicit rebalance loop, collects portfolio fills and
+daily execution-cost results, evaluates completed round-trip turnover, and
+summarizes aligned strategy NAV versus the Nifty 100 TRI benchmark.
+
+This runner does not load files, download data, write reports, update the
+experiment ledger, execute B001/B002/B003 against the frozen dataset, or
+implement B003 hysteresis.
+
+**Evidence:** New tests cover the runner wiring momentum signals into next-day
+rebalance execution, collecting fills and costs, counting a completed round
+trip, summarizing performance over aligned benchmark dates, preserving final
+unexecuted signal dates, and rejecting invalid runner inputs.
+
+**Reason:** Before running any Phase 1 experiment, the orchestration boundary
+should be fixed and tested without hiding new calculations inside scripts or
+reports. Keeping the runner free of file I/O makes later B001 execution
+auditable and reproducible from explicitly supplied frozen inputs.
+
+**Affected experiments:** B001, B001-S015, B002, B002-S015, B003, B003-S015,
+and all Phase 1 result-generation scripts.
+
+**Rerun required:** No strategy run exists yet.
