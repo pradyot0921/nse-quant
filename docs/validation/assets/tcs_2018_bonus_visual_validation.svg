@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="680" viewBox="0 0 960 680" role="img" aria-labelledby="title desc">
+  <title id="title">TCS 2018 bonus visual validation</title>
+  <desc id="desc">Raw close shows the mechanical bonus adjustment drop on 2018-05-31 while adjusted close remains continuous after backward adjustment.</desc>
+  <rect width="960" height="680" fill="#ffffff" />
+  <text x="86" y="44" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#111827">TCS 1:1 bonus visual validation</text>
+  <text x="86" y="70" font-family="Arial, sans-serif" font-size="13" fill="#4b5563">Indexed to 2018-05-30 = 100. Ex-date: 2018-05-31. Data source: processed V0 OHLCV dataset.</text>
+
+  <line x1="86" y1="315" x2="846" y2="315" stroke="#cbd5e1" />
+  <line x1="86" y1="100" x2="86" y2="315" stroke="#cbd5e1" />
+  <line x1="466.0" y1="100" x2="466.0" y2="315" stroke="#111827" stroke-width="1.2" stroke-dasharray="5 5" />
+  <text x="52" y="204" font-family="Arial, sans-serif" font-size="13" fill="#374151" text-anchor="middle" transform="rotate(-90 52 204)">Close index</text>
+  <polyline points="86.0,130.8 149.3,120.8 212.7,122.5 276.0,130.2 339.3,128.2 402.7,129.1 466.0,292.4 529.3,293.2 592.7,292.1 656.0,294.2 719.3,293.8 782.7,292.9 846.0,291.8" fill="none" stroke="#2563eb" stroke-width="2.4" />
+  <polyline points="86.0,130.8 149.3,120.8 212.7,122.5 276.0,130.2 339.3,128.2 402.7,129.1 466.0,132.0 529.3,133.6 592.7,131.4 656.0,135.6 719.3,134.8 782.7,133.0 846.0,130.9" fill="none" stroke="#d97706" stroke-width="2.4" />
+  <circle cx="86.0" cy="130.8" r="3.4" fill="#2563eb" /><circle cx="86.0" cy="130.8" r="3.4" fill="#d97706" /><circle cx="149.3" cy="120.8" r="3.4" fill="#2563eb" /><circle cx="149.3" cy="120.8" r="3.4" fill="#d97706" /><circle cx="212.7" cy="122.5" r="3.4" fill="#2563eb" /><circle cx="212.7" cy="122.5" r="3.4" fill="#d97706" /><circle cx="276.0" cy="130.2" r="3.4" fill="#2563eb" /><circle cx="276.0" cy="130.2" r="3.4" fill="#d97706" /><circle cx="339.3" cy="128.2" r="3.4" fill="#2563eb" /><circle cx="339.3" cy="128.2" r="3.4" fill="#d97706" /><circle cx="402.7" cy="129.1" r="3.4" fill="#2563eb" /><circle cx="402.7" cy="129.1" r="3.4" fill="#d97706" /><circle cx="466.0" cy="292.4" r="3.4" fill="#2563eb" /><circle cx="466.0" cy="132.0" r="3.4" fill="#d97706" /><circle cx="529.3" cy="293.2" r="3.4" fill="#2563eb" /><circle cx="529.3" cy="133.6" r="3.4" fill="#d97706" /><circle cx="592.7" cy="292.1" r="3.4" fill="#2563eb" /><circle cx="592.7" cy="131.4" r="3.4" fill="#d97706" /><circle cx="656.0" cy="294.2" r="3.4" fill="#2563eb" /><circle cx="656.0" cy="135.6" r="3.4" fill="#d97706" /><circle cx="719.3" cy="293.8" r="3.4" fill="#2563eb" /><circle cx="719.3" cy="134.8" r="3.4" fill="#d97706" /><circle cx="782.7" cy="292.9" r="3.4" fill="#2563eb" /><circle cx="782.7" cy="133.0" r="3.4" fill="#d97706" /><circle cx="846.0" cy="291.8" r="3.4" fill="#2563eb" /><circle cx="846.0" cy="130.9" r="3.4" fill="#d97706" />
+  <rect x="607" y="106" width="210" height="53" rx="6" fill="#ffffff" stroke="#d1d5db" />
+  <line x1="623" y1="124" x2="657" y2="124" stroke="#2563eb" stroke-width="2.4" />
+  <text x="667" y="128" font-family="Arial, sans-serif" font-size="13" fill="#111827">Raw close</text>
+  <line x1="623" y1="145" x2="657" y2="145" stroke="#d97706" stroke-width="2.4" />
+  <text x="667" y="149" font-family="Arial, sans-serif" font-size="13" fill="#111827">Adjusted close</text>
+  <text x="474.0" y="97" font-family="Arial, sans-serif" font-size="12" fill="#111827">Bonus ex-date</text>
+
+  <line x1="86" y1="580" x2="846" y2="580" stroke="#cbd5e1" />
+  <line x1="86" y1="405" x2="86" y2="580" stroke="#cbd5e1" />
+  <line x1="466.0" y1="405" x2="466.0" y2="580" stroke="#111827" stroke-width="1.2" stroke-dasharray="5 5" />
+  <text x="52" y="492" font-family="Arial, sans-serif" font-size="13" fill="#374151" text-anchor="middle" transform="rotate(-90 52 492)">Volume index</text>
+  <rect x="71.0" y="563.1" width="30" height="16.9" fill="#9ba5b5" opacity="0.55" /><rect x="134.3" y="539.2" width="30" height="40.8" fill="#9ba5b5" opacity="0.55" /><rect x="197.7" y="525.9" width="30" height="54.1" fill="#9ba5b5" opacity="0.55" /><rect x="261.0" y="526.8" width="30" height="53.2" fill="#9ba5b5" opacity="0.55" /><rect x="324.3" y="529.9" width="30" height="50.1" fill="#9ba5b5" opacity="0.55" /><rect x="387.7" y="525.7" width="30" height="54.3" fill="#9ba5b5" opacity="0.55" /><rect x="451.0" y="421.9" width="30" height="158.1" fill="#9ba5b5" opacity="0.55" /><rect x="514.3" y="535.1" width="30" height="44.9" fill="#9ba5b5" opacity="0.55" /><rect x="577.7" y="532.6" width="30" height="47.4" fill="#9ba5b5" opacity="0.55" /><rect x="641.0" y="507.3" width="30" height="72.7" fill="#9ba5b5" opacity="0.55" /><rect x="704.3" y="514.3" width="30" height="65.7" fill="#9ba5b5" opacity="0.55" /><rect x="767.7" y="508.5" width="30" height="71.5" fill="#9ba5b5" opacity="0.55" /><rect x="831.0" y="503.0" width="30" height="77.0" fill="#9ba5b5" opacity="0.55" />
+  <polyline points="86.0,563.1 149.3,539.2 212.7,525.9 276.0,526.8 339.3,529.9 402.7,525.7 466.0,504.9 529.3,561.5 592.7,560.2 656.0,547.6 719.3,551.1 782.7,548.2 846.0,545.4" fill="none" stroke="#d97706" stroke-width="2.4" />
+  <circle cx="86.0" cy="563.1" r="3.2" fill="#d97706" /><circle cx="149.3" cy="539.2" r="3.2" fill="#d97706" /><circle cx="212.7" cy="525.9" r="3.2" fill="#d97706" /><circle cx="276.0" cy="526.8" r="3.2" fill="#d97706" /><circle cx="339.3" cy="529.9" r="3.2" fill="#d97706" /><circle cx="402.7" cy="525.7" r="3.2" fill="#d97706" /><circle cx="466.0" cy="504.9" r="3.2" fill="#d97706" /><circle cx="529.3" cy="561.5" r="3.2" fill="#d97706" /><circle cx="592.7" cy="560.2" r="3.2" fill="#d97706" /><circle cx="656.0" cy="547.6" r="3.2" fill="#d97706" /><circle cx="719.3" cy="551.1" r="3.2" fill="#d97706" /><circle cx="782.7" cy="548.2" r="3.2" fill="#d97706" /><circle cx="846.0" cy="545.4" r="3.2" fill="#d97706" />
+  <rect x="607" y="411" width="230" height="53" rx="6" fill="#ffffff" stroke="#d1d5db" />
+  <rect x="623" y="422" width="34" height="10" fill="#9ba5b5" opacity="0.55" />
+  <text x="667" y="432" font-family="Arial, sans-serif" font-size="13" fill="#111827">Raw volume</text>
+  <line x1="623" y1="450" x2="657" y2="450" stroke="#d97706" stroke-width="2.4" />
+  <text x="667" y="454" font-family="Arial, sans-serif" font-size="13" fill="#111827">Adjusted volume</text>
+
+  <text x="86.0" y="622" font-size="12" text-anchor="end" transform="rotate(-35 86.0 622)">2018-05-23</text><text x="212.7" y="622" font-size="12" text-anchor="end" transform="rotate(-35 212.7 622)">2018-05-25</text><text x="339.3" y="622" font-size="12" text-anchor="end" transform="rotate(-35 339.3 622)">2018-05-29</text><text x="466.0" y="622" font-size="12" text-anchor="end" transform="rotate(-35 466.0 622)">2018-05-31</text><text x="592.7" y="622" font-size="12" text-anchor="end" transform="rotate(-35 592.7 622)">2018-06-04</text><text x="719.3" y="622" font-size="12" text-anchor="end" transform="rotate(-35 719.3 622)">2018-06-06</text><text x="846.0" y="622" font-size="12" text-anchor="end" transform="rotate(-35 846.0 622)">2018-06-08</text>
+  <text x="86" y="657" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">Raw close ratio ex-date/prior close: 0.4954. Adjusted close ratio: 0.9909.</text>
+</svg>
