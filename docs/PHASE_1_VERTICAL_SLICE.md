@@ -1257,7 +1257,7 @@ Phase 1 cannot be considered complete until these pass.
 - [ ] Split case tested.
 - [ ] Bonus case tested.
 - [ ] Unsupported event surfaced.
-- [ ] One real event inspected visually.
+- [x] One real event inspected visually.
 
 ### Universe
 

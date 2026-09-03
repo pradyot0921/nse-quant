@@ -15,6 +15,7 @@ validation holdout.
 | B002 research run | Rejected |
 | B003 research run | Rejected |
 | Validation holdout | Uninspected |
+| Corporate-action visual validation | Complete |
 | B001-S015, B002-S015, B003-S015 | Unrun robustness rows |
 | Formal Phase 1 closeout | Pending acceptance/documentation items |
 
@@ -45,13 +46,13 @@ promotion test.
 - Decimal portfolio accounting, cost-aware fills, T+1 execution, trade logs,
   and Phase 1 reports;
 - synthetic three-trade hand reconciliation;
+- real-event corporate-action visual validation for TCS `Bonus 1:1`;
 - B001, B002, and B003 research-period results permanently recorded.
 
 ## Remaining Closeout Items
 
 These items should be closed before declaring Phase 1 formally complete:
 
-- corporate-action visual-validation artifact for a real split or bonus;
 - additional report statistics from the original Phase 1 specification, if
   literal report-spec completion is required;
 - real Zerodha delivery cost reconciliation if a suitable broker record is
