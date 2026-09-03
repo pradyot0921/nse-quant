@@ -57,6 +57,7 @@ not rescue trials.
 | Evidence | Artifact |
 | --- | --- |
 | Research-stage outcome review | `docs/validation/PHASE1_RESEARCH_REVIEW_V0.md` |
+| Research postmortem | `docs/validation/PHASE1_RESEARCH_POSTMORTEM_V0.md` |
 | Closeout status before final signoff | `docs/validation/PHASE1_CLOSEOUT_STATUS_V0.md` |
 | Frozen universe | `universes/nifty100_v0_20.csv` |
 | Universe selection rule | `universes/selection_rule_v0.md` |
