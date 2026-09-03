@@ -1800,3 +1800,63 @@ may run only if B004 passes every baseline promotion gate.
 
 **Rerun required:** No. This decision records implementation readiness only; it
 does not run a strategy.
+
+---
+
+## D-066 — B004 research-period result is rejected before robustness
+
+**Date:** 3 September 2026
+**Status:** Accepted
+
+**Old rule:** B004 was implemented and ready for a research-period-only run,
+but no B004 result had been generated.
+
+**New rule:** The B004 research-period run is permanently recorded and marked
+`REJECTED` before robustness or validation. The run used the frozen Phase 2
+specification, frozen V0 universe, frozen adjusted dataset, Nifty 100 TRI
+benchmark, 2026 reference cost model, baseline 0.05% adverse deterministic
+slippage, 60-session weekly momentum, B003 hysteresis thresholds, and the
+externally specified 200-session Nifty 100 TRI trend filter.
+
+Research-period result:
+
+```text
+Period: 2016-01-01 through 2022-12-30
+Observations: 1726
+Starting capital: 50000.00
+Ending capital: 81332.15
+Net return: 0.626643
+CAGR: 0.071975
+Maximum drawdown: 0.306676
+Sharpe: 0.446175
+Benchmark CAGR: 0.137013
+Benchmark Sharpe: 0.837396
+Benchmark maximum drawdown: 0.379228
+Completed round trips: 127
+Transaction costs: 7693.42
+Maximum stock positive contribution share: 0.181737
+Maximum calendar-year positive contribution share: 0.497509
+Turnover gate: PASS
+Drawdown gate: PASS
+CAGR gate: FAIL
+Sharpe gate: FAIL
+Stock concentration gate: PASS
+Calendar-year concentration gate: FAIL
+```
+
+B004-S015 is marked `NOT_RUN` because B004 failed frozen baseline promotion
+gates. It is not a rescue trial.
+
+**Evidence:** `experiments/results/B004_research/phase1_report.md`,
+`experiments/results/B004_research/trade_log.csv`, and
+`docs/phase2/B004_RESEARCH_REVIEW_V0.md`.
+
+**Reason:** B004 improved drawdown versus the benchmark-relative threshold, but
+it did not retain acceptable return, risk-adjusted performance, or
+calendar-year diversification under the pre-registered gates. Since every gate
+had to pass, B004 is rejected.
+
+**Affected experiments:** B004 directly. B004-S015 remains unrun and is no
+longer eligible under this baseline because B004 failed.
+
+**Rerun required:** No prior B004 result exists.

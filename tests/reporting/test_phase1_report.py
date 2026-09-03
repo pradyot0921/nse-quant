@@ -90,6 +90,8 @@ def test_phase1_report_writes_required_sections_and_warnings(tmp_path):
     assert "| Cost drag | 0.000024 |" in text
     assert "| Completed trades with P&L | 0 |" in text
     assert "| Win rate | N/A |" in text
+    assert "## Annual Turnover Detail" in text
+    assert "| 2026 | 0 | yes | PASS |" in text
     assert "| Benchmark CAGR | 0.060000 |" in text
     assert "| Benchmark Sharpe | 0.500000 |" in text
     assert "| CAGR difference | 0.040000 |" in text
