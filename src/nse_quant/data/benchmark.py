@@ -177,6 +177,18 @@ def write_tri_benchmark_csv(
     return output
 
 
+def load_tri_benchmark_csv(path: str | Path) -> tuple[TriBenchmarkBar, ...]:
+    """Load a saved Nifty TRI benchmark CSV."""
+
+    with Path(path).open(encoding="utf-8-sig", newline="") as handle:
+        rows = tuple(csv.DictReader(handle))
+    bars = tuple(_bar_from_csv_row(row) for row in rows)
+    if not bars:
+        raise BenchmarkDataError("benchmark CSV is empty")
+    _validate_unique_dates(bars)
+    return tuple(sorted(bars, key=lambda bar: bar.trade_date))
+
+
 def write_benchmark_validation_report(
     report: BenchmarkValidationReport,
     output_path: str | Path,
@@ -232,6 +244,23 @@ def write_benchmark_validation_report(
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text("\n".join(lines), encoding="utf-8")
     return output
+
+
+def _bar_from_csv_row(row: dict[str, str]) -> TriBenchmarkBar:
+    raw_ntr = row.get("net_total_return_index", "").strip()
+    return TriBenchmarkBar(
+        index_name=row.get("index_name", "").strip(),
+        trade_date=date.fromisoformat(row.get("trade_date", "").strip()),
+        total_return_index=_positive_decimal(
+            row.get("total_return_index", ""),
+            "total_return_index",
+        ),
+        net_total_return_index=(
+            None
+            if raw_ntr == ""
+            else _positive_decimal(raw_ntr, "net_total_return_index")
+        ),
+    )
 
 
 def _fetch_url(url: str, body: bytes, headers: dict[str, str]) -> bytes:
