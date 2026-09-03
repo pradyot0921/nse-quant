@@ -19,6 +19,8 @@ def test_phase1_ledger_references_frozen_universe_and_dataset_versions():
         "B002-S015",
         "B003",
         "B003-S015",
+        "B004",
+        "B004-S015",
     }
     ledger_rows = rows()
     status_by_id = {row["experiment_id"]: row["status"] for row in ledger_rows}
@@ -91,3 +93,22 @@ def test_unrun_phase1_ledger_result_columns_remain_blank():
         if row["experiment_id"] in {"B001", "B002", "B003"}:
             continue
         assert all(row[column] == "" for column in result_columns)
+
+
+def test_phase2_ledger_registers_b004_without_results():
+    ledger_rows = rows()
+    by_id = {row["experiment_id"]: row for row in ledger_rows}
+    b004 = by_id["B004"]
+    b004_s015 = by_id["B004-S015"]
+
+    assert b004["status"] == "PLANNED"
+    assert b004["strategy"] == "weekly relative momentum with hysteresis plus exogenous market-trend filter"
+    assert "market_regime=SMA200 on Nifty 100 TRI" in b004["parameters"]
+    assert "risk_on when TRI>SMA200" in b004["parameters"]
+    assert "risk_off when TRI<=SMA200" in b004["parameters"]
+    assert b004["slippage_model"] == "adverse deterministic slippage 0.05% baseline"
+    assert "Phase 2 baseline slot 1 of 3" in b004["notes"]
+    assert "Validation holdout remains sealed" in b004["notes"]
+    assert b004_s015["status"] == "PLANNED"
+    assert b004_s015["slippage_model"] == "adverse deterministic slippage 0.15% robustness"
+    assert "Run only if B004 passes every baseline promotion gate" in b004_s015["notes"]

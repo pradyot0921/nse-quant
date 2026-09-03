@@ -8,6 +8,7 @@ UNIVERSE_RULE = ROOT / "universes" / "selection_rule_v0.md"
 CLOSEOUT = ROOT / "docs" / "validation" / "PHASE1_CLOSEOUT_STATUS_V0.md"
 FINAL_CLOSEOUT = ROOT / "docs" / "validation" / "PHASE1_FINAL_CLOSEOUT_V0.md"
 POSTMORTEM = ROOT / "docs" / "validation" / "PHASE1_RESEARCH_POSTMORTEM_V0.md"
+PHASE2_INTAKE = ROOT / "docs" / "validation" / "PHASE2_HYPOTHESIS_INTAKE_TEMPLATE.md"
 
 
 def test_phase1_status_documents_reflect_research_stop():
@@ -17,9 +18,11 @@ def test_phase1_status_documents_reflect_research_stop():
     closeout = " ".join(CLOSEOUT.read_text(encoding="utf-8").split())
     final_closeout = " ".join(FINAL_CLOSEOUT.read_text(encoding="utf-8").split())
     postmortem = " ".join(POSTMORTEM.read_text(encoding="utf-8").split())
+    phase2_intake = " ".join(PHASE2_INTAKE.read_text(encoding="utf-8").split())
 
-    assert "B001/B002/B003 research cycle concluded with no strategy promoted" in readme
-    assert "repo-owned closeout complete" in readme
+    assert "Phase 2 Stage 2.0 specification lock" in readme
+    assert "B001/B002/B003 concluded with no strategy promoted" in readme
+    assert "repo-owned closeout are complete" in readme
     assert "VALIDATION HOLDOUT: uninspected" not in readme
     assert "Status:** IN PROGRESS" not in phase1
     assert "Last updated:** 19 August 2026" not in phase1
@@ -43,3 +46,8 @@ def test_phase1_status_documents_reflect_research_stop():
     assert "positive trade-level statistics while still being a poor portfolio candidate" in postmortem
     assert "They are not rescue trials." in postmortem
     assert "validation holdout remains unspent" in postmortem
+    assert "PHASE2_HYPOTHESIS_INTAKE_TEMPLATE.md" in final_closeout
+    assert "This document is the required starting point" in phase2_intake
+    assert "Do not reuse B001, B002, B003, B001-S015, B002-S015, or B003-S015." in phase2_intake
+    assert "The validation holdout may only be inspected after the candidate passes every pre-registered research-period gate." in phase2_intake
+    assert "No run should start until every box above is complete." in phase2_intake
