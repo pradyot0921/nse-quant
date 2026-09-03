@@ -1721,3 +1721,41 @@ and are not rescue trials.
 
 **Rerun required:** No. This decision registers planned Phase 2 work only; it
 does not run a strategy.
+
+---
+
+## D-064 — Stage 2.1 diagnosis clears B004 for implementation
+
+**Date:** 3 September 2026
+**Status:** Accepted
+
+**Old rule:** B004 was pre-registered as a planned Phase 2 candidate, but Stage
+2.1 diagnosis had not yet been completed.
+
+**New rule:** Stage 2.1 is complete. `docs/phase2/PHASE2_DIAGNOSIS_V0.md`
+records a general-mechanism diagnosis and finds no fatal conceptual issue that
+requires cancelling B004 before implementation.
+
+The diagnosis does not run B004, does not simulate the regime filter, does not
+inspect switch dates, does not identify worst Phase 1 episodes, does not test
+alternative parameters, and does not inspect the validation holdout.
+
+The next permitted stage is Stage 2.2 implementation of the frozen B004 rule,
+followed by Stage 2.3 synthetic/unit validation. A real B004 research-period
+run remains prohibited until those implementation and unit-validation steps are
+complete.
+
+**Evidence:** `docs/phase2/PHASE2_DIAGNOSIS_V0.md` records the Stage 2.1
+boundary, external mechanism, implementation risks, fatal-problem check, and
+Stage 2.2 requirements.
+
+**Reason:** The B004 rule was fixed before diagnosis and has a plausible
+external basis in long-term trend-following and documented momentum crash risk.
+That is enough to proceed to implementation, but not enough to infer expected
+performance.
+
+**Affected experiments:** `B004` remains `PLANNED`. `B004-S015` remains
+`PLANNED` and may run only if B004 passes every baseline promotion gate.
+
+**Rerun required:** No. This decision records diagnosis only; it does not run a
+strategy.
