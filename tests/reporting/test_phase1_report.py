@@ -10,8 +10,10 @@ from nse_quant.backtest.turnover import evaluate_round_trip_turnover
 from nse_quant.reporting.performance import PerformanceSummary
 from nse_quant.reporting.phase1_report import (
     DEFAULT_RESEARCH_WARNINGS,
+    summarize_return_concentration,
     write_phase1_markdown_report,
 )
+from nse_quant.strategies.momentum import RegimeExposureSummary
 
 
 def request(trade_date, symbol, side, quantity, price):
@@ -181,3 +183,89 @@ def test_phase1_report_writes_trade_outcome_statistics(tmp_path):
     assert "| Average losing trade | -100.00 |" in text
     assert "| Average win / average loss ratio | 1.000000 |" in text
     assert "| Expectancy per completed trade | 0.00 |" in text
+
+
+def test_phase1_report_writes_b004_regime_and_concentration_sections(tmp_path):
+    fills = (
+        PortfolioFill(date(2026, 1, 2), 1, "AAA", FillSide.BUY, 10, "100.00"),
+        PortfolioFill(date(2026, 1, 10), 1, "AAA", FillSide.SELL, 10, "115.00"),
+        PortfolioFill(date(2026, 1, 11), 1, "BBB", FillSide.BUY, 10, "100.00"),
+        PortfolioFill(date(2026, 1, 20), 1, "BBB", FillSide.SELL, 10, "110.00"),
+    )
+    snapshots = (
+        PortfolioSnapshot(
+            trade_date=date(2026, 12, 31),
+            cash=Decimal("56000.00"),
+            positions=(),
+            holdings_value=Decimal("0.00"),
+            nav=Decimal("56000.00"),
+        ),
+        PortfolioSnapshot(
+            trade_date=date(2027, 12, 31),
+            cash=Decimal("58000.00"),
+            positions=(),
+            holdings_value=Decimal("0.00"),
+            nav=Decimal("58000.00"),
+        ),
+    )
+    turnover = evaluate_round_trip_turnover(fills, complete_years=(2026, 2027))
+
+    output = write_phase1_markdown_report(
+        tmp_path / "report.md",
+        experiment_id="B004",
+        strategy_name="weekly relative momentum with hysteresis + filter",
+        universe_version="nifty100_v0_20_d037",
+        data_version="nifty100_v0_adjusted_ohlcv_d039",
+        performance=summary(),
+        turnover=turnover,
+        fills=fills,
+        portfolio_snapshots=snapshots,
+        complete_years=(2026, 2027),
+        regime_exposure=RegimeExposureSummary(
+            risk_on_sessions=60,
+            risk_off_sessions=40,
+            unavailable_sessions=199,
+            weekly_state_changes=3,
+        ),
+        comparison_rows=(
+            ("CAGR", "0.150000", "0.136461"),
+            ("Maximum drawdown", "0.300000", "0.512654"),
+        ),
+    )
+
+    text = output.read_text(encoding="utf-8")
+    assert "## Market Regime" in text
+    assert "| Risk-on sessions | 60 |" in text
+    assert "| Risk-off sessions | 40 |" in text
+    assert "| Risk-on share after SMA available | 0.600000 |" in text
+    assert "| Weekly regime state changes | 3 |" in text
+    assert "## Return Concentration" in text
+    assert "| Maximum stock positive contribution share | 0.600000 |" in text
+    assert "| Maximum calendar-year positive contribution share | 0.750000 |" in text
+    assert "## Direct Candidate Comparison" in text
+    assert "| CAGR | 0.150000 | 0.136461 |" in text
+
+
+def test_return_concentration_reproduces_hand_calculated_fixture():
+    fills = (
+        PortfolioFill(date(2026, 1, 2), 1, "AAA", FillSide.BUY, 10, "100.00"),
+        PortfolioFill(date(2026, 1, 10), 1, "AAA", FillSide.SELL, 10, "130.00"),
+        PortfolioFill(date(2026, 1, 11), 1, "BBB", FillSide.BUY, 10, "100.00"),
+        PortfolioFill(date(2026, 1, 20), 1, "BBB", FillSide.SELL, 10, "120.00"),
+        PortfolioFill(date(2026, 1, 21), 1, "CCC", FillSide.BUY, 10, "100.00"),
+        PortfolioFill(date(2026, 1, 30), 1, "CCC", FillSide.SELL, 10, "90.00"),
+    )
+    snapshots = (
+        PortfolioSnapshot(date(2026, 12, 31), Decimal("56000.00"), (), Decimal("0.00"), Decimal("56000.00")),
+        PortfolioSnapshot(date(2027, 12, 31), Decimal("59000.00"), (), Decimal("0.00"), Decimal("59000.00")),
+    )
+
+    summary_result = summarize_return_concentration(
+        fills=fills,
+        portfolio_snapshots=snapshots,
+        starting_nav=Decimal("50000.00"),
+        complete_years=(2026, 2027),
+    )
+
+    assert summary_result.max_stock_positive_contribution_share == Decimal("0.600000")
+    assert summary_result.max_calendar_year_positive_contribution_share == Decimal("0.666667")

@@ -10,6 +10,7 @@ from nse_quant.experiments.phase1 import (
     Phase1ExperimentError,
     run_weekly_hysteresis_momentum_experiment,
     run_weekly_momentum_experiment,
+    run_weekly_regime_filtered_hysteresis_momentum_experiment,
 )
 
 
@@ -177,3 +178,107 @@ def test_weekly_momentum_experiment_rejects_too_little_data_for_signals():
             starting_cash="10000",
             lookback_sessions=1,
         )
+
+
+def test_b004_experiment_risk_off_schedules_full_exit_and_no_entries():
+    dates = [
+        date(2026, 1, 1),
+        date(2026, 1, 2),
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+        date(2026, 1, 12),
+    ]
+    daily_bars = [
+        day(dates[0], {"AAA": ("100", "100"), "BBB": ("100", "100")}),
+        day(dates[1], {"AAA": ("110", "110"), "BBB": ("100", "100")}),
+        day(dates[2], {"AAA": ("110", "110"), "BBB": ("100", "100")}),
+        day(dates[3], {"AAA": ("100", "100"), "BBB": ("120", "120")}),
+        day(dates[4], {"AAA": ("100", "100"), "BBB": ("120", "130")}),
+    ]
+
+    result = run_weekly_regime_filtered_hysteresis_momentum_experiment(
+        experiment_id="B004",
+        daily_bars=daily_bars,
+        benchmark_bars=[
+            benchmark(dates[0], "100"),
+            benchmark(dates[1], "102"),
+            benchmark(dates[2], "100"),
+            benchmark(dates[3], "90"),
+            benchmark(dates[4], "91"),
+        ],
+        universe=["AAA", "BBB"],
+        starting_cash="10000",
+        lookback_sessions=1,
+        max_positions=1,
+        entry_rank=1,
+        hold_rank=2,
+        regime_sma_sessions=2,
+        slippage_rate="0",
+        complete_years=[2026],
+    )
+
+    assert [signal.desired_symbols for signal in result.signals] == [
+        ("AAA",),
+        (),
+        ("BBB",),
+    ]
+    assert [(fill.side, fill.symbol) for fill in result.fills] == [
+        (FillSide.BUY, "AAA"),
+        (FillSide.SELL, "AAA"),
+    ]
+    assert result.backtest.final_snapshot.positions == ()
+    assert result.regime_exposure is not None
+    assert result.regime_exposure.weekly_state_changes == 2
+
+
+def test_b004_experiment_retries_unfilled_risk_off_exit():
+    dates = [
+        date(2026, 1, 1),
+        date(2026, 1, 2),
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+        date(2026, 1, 12),
+        date(2026, 1, 13),
+    ]
+    daily_bars = [
+        day(dates[0], {"AAA": ("100", "100")}),
+        day(dates[1], {"AAA": ("110", "110")}),
+        day(dates[2], {"AAA": ("110", "110")}),
+        day(dates[3], {"AAA": ("100", "100")}),
+        day(dates[4], {"AAA": ("100", "100")}),
+        day(dates[5], {"AAA": ("100", "100")}),
+    ]
+
+    result = run_weekly_regime_filtered_hysteresis_momentum_experiment(
+        experiment_id="B004",
+        daily_bars=daily_bars,
+        benchmark_bars=[
+            benchmark(dates[0], "100"),
+            benchmark(dates[1], "102"),
+            benchmark(dates[2], "100"),
+            benchmark(dates[3], "90"),
+            benchmark(dates[4], "91"),
+            benchmark(dates[5], "92"),
+        ],
+        universe=["AAA"],
+        starting_cash="10000",
+        lookback_sessions=1,
+        max_positions=1,
+        entry_rank=1,
+        hold_rank=1,
+        regime_sma_sessions=2,
+        slippage_rate="0",
+        complete_years=[2026],
+        untradeable_symbols_by_date={dates[4]: ["AAA"]},
+    )
+
+    assert [execution.unfilled_exit_symbols for execution in result.backtest.executions] == [
+        (),
+        ("AAA",),
+        (),
+    ]
+    assert [(fill.side, fill.symbol) for fill in result.fills] == [
+        (FillSide.BUY, "AAA"),
+        (FillSide.SELL, "AAA"),
+    ]
+    assert result.backtest.final_snapshot.positions == ()
