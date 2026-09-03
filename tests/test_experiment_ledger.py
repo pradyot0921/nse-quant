@@ -25,9 +25,10 @@ def test_phase1_ledger_references_frozen_universe_and_dataset_versions():
 
     assert {row["experiment_id"] for row in ledger_rows} == expected_ids
     assert status_by_id["B001"] == "REJECTED"
+    assert status_by_id["B002"] == "REJECTED"
     assert status_by_id["B003"] == "REJECTED"
     for row in ledger_rows:
-        if row["experiment_id"] not in {"B001", "B003"}:
+        if row["experiment_id"] not in {"B001", "B002", "B003"}:
             assert row["status"] == "PLANNED"
         assert row["universe_version"] == "nifty100_v0_20_d037"
         assert row["data_version"] == "nifty100_v0_adjusted_ohlcv_d039"
@@ -45,6 +46,20 @@ def test_phase1_ledger_records_b001_research_result_only():
     assert b001["turnover"] == "270"
     assert b001["net_return"] == "2.073076"
     assert "validation period not inspected" in b001["notes"]
+
+
+def test_phase1_ledger_records_b002_research_result_only():
+    ledger_rows = rows()
+    by_id = {row["experiment_id"]: row for row in ledger_rows}
+    b002 = by_id["B002"]
+
+    assert b002["cagr"] == "0.122232"
+    assert b002["max_drawdown"] == "0.534276"
+    assert b002["turnover"] == "199"
+    assert b002["net_return"] == "1.241707"
+    assert "Turnover gate FAIL" in b002["notes"]
+    assert "drawdown gate FAIL" in b002["notes"]
+    assert "validation period not inspected" in b002["notes"]
 
 
 def test_phase1_ledger_records_b003_research_result_only():
@@ -73,6 +88,6 @@ def test_unrun_phase1_ledger_result_columns_remain_blank():
     )
 
     for row in rows():
-        if row["experiment_id"] in {"B001", "B003"}:
+        if row["experiment_id"] in {"B001", "B002", "B003"}:
             continue
         assert all(row[column] == "" for column in result_columns)
