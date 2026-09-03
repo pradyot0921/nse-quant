@@ -125,6 +125,85 @@ def test_run_phase1_experiment_script_supports_b003_hysteresis(tmp_path):
     assert "| Experiment | `B003` |" in report.read_text(encoding="utf-8")
 
 
+def test_run_phase1_experiment_script_supports_b004_research_only(tmp_path):
+    script = load_script()
+    ledger = tmp_path / "ledger.csv"
+    universe = tmp_path / "universe.csv"
+    dataset = tmp_path / "dataset.csv"
+    benchmark = tmp_path / "benchmark.csv"
+    output_dir = tmp_path / "results"
+    sessions = _weekday_sessions(date(2016, 1, 1), 205)
+
+    ledger.write_text(
+        "\n".join(
+            [
+                "experiment_id,strategy,universe_version,data_version,research_period,validation_period,slippage_model",
+                (
+                    "B004,weekly relative momentum with hysteresis + exogenous Nifty 100 TRI SMA200 regime filter,u_v0,d_v0,"
+                    f"{sessions[0]}..{sessions[-1]},2017-01-01..2017-01-10,adverse deterministic slippage 0.05% baseline"
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    universe.write_text("symbol\nAAA\nBBB\n", encoding="utf-8")
+    dataset.write_text(_dataset_csv(sessions), encoding="utf-8")
+    benchmark.write_text(_benchmark_csv(sessions), encoding="utf-8")
+
+    exit_code = script.main(
+        [
+            "--experiment-id",
+            "B004",
+            "--period",
+            "research",
+            "--ledger",
+            str(ledger),
+            "--universe",
+            str(universe),
+            "--dataset",
+            str(dataset),
+            "--benchmark",
+            str(benchmark),
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+
+    assert exit_code == 0
+    report = output_dir / "B004_research" / "phase1_report.md"
+    text = report.read_text(encoding="utf-8")
+    assert "| Experiment | `B004` |" in text
+    assert "## Market Regime" in text
+    assert "| Regime unavailable sessions | 199 |" in text
+    assert "## Direct Candidate Comparison" in text
+    assert "| CAGR |" in text
+    assert "| Maximum drawdown |" in text
+    assert "| Sharpe |" in text
+    assert "| Transaction costs |" in text
+    assert "| Percentage time invested |" in text
+
+
+def test_run_phase1_experiment_script_blocks_b004_validation(tmp_path):
+    script = load_script()
+    ledger = tmp_path / "ledger.csv"
+    ledger.write_text(
+        "\n".join(
+            [
+                "experiment_id,strategy,universe_version,data_version,research_period,validation_period",
+                "B004,weekly relative momentum with hysteresis + filter,u_v0,d_v0,2016-01-01..2016-01-31,2023-01-01..2023-01-31",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        script.main(["--experiment-id", "B004", "--period", "validation", "--ledger", str(ledger)])
+    except SystemExit as exc:
+        assert "validation run is blocked until a Phase 3 promotion artifact exists" in str(exc)
+    else:
+        raise AssertionError("B004 validation run was not blocked")
+
+
 def _weekday_sessions(start: date, count: int) -> list[date]:
     sessions = []
     current = start

@@ -15,9 +15,13 @@ from nse_quant.backtest.turnover import TurnoverEvaluation, evaluate_round_trip_
 from nse_quant.data.benchmark import TriBenchmarkBar
 from nse_quant.reporting.performance import PerformanceSummary, summarize_performance
 from nse_quant.strategies.momentum import (
+    RegimeExposureSummary,
+    RegimeFilteredMomentumSignal,
     MomentumSignal,
     generate_weekly_hysteresis_momentum_signals,
     generate_weekly_momentum_signals,
+    generate_weekly_regime_filtered_hysteresis_momentum_signals,
+    summarize_regime_exposure,
 )
 
 
@@ -28,12 +32,13 @@ class Phase1ExperimentError(RuntimeError):
 @dataclass(frozen=True)
 class Phase1ExperimentRun:
     experiment_id: str
-    signals: tuple[MomentumSignal, ...]
+    signals: tuple[MomentumSignal | RegimeFilteredMomentumSignal, ...]
     backtest: RebalanceLoopResult
     fills: tuple[PortfolioFill, ...]
     execution_costs: tuple[ExecutionCostResult, ...]
     turnover: TurnoverEvaluation
     performance: PerformanceSummary
+    regime_exposure: RegimeExposureSummary | None = None
 
 
 def run_weekly_momentum_experiment(
@@ -114,18 +119,70 @@ def run_weekly_hysteresis_momentum_experiment(
     )
 
 
+def run_weekly_regime_filtered_hysteresis_momentum_experiment(
+    *,
+    experiment_id: str,
+    daily_bars: Iterable[DailyBars],
+    benchmark_bars: Iterable[TriBenchmarkBar],
+    universe: Iterable[str],
+    starting_cash: Decimal | str | int,
+    lookback_sessions: int = 60,
+    max_positions: int = 3,
+    entry_rank: int = 3,
+    hold_rank: int = 6,
+    regime_sma_sessions: int = 200,
+    slippage_rate: Decimal | str | int = Decimal("0.0005"),
+    complete_years: Iterable[int] = (),
+    annual_turnover_limit: int = 30,
+    untradeable_symbols_by_date: Mapping[date, Iterable[str]] | None = None,
+) -> Phase1ExperimentRun:
+    """Run the frozen B004 regime-filtered B003 structure."""
+
+    days = tuple(daily_bars)
+    benchmark_tuple = tuple(benchmark_bars)
+    signals = generate_weekly_regime_filtered_hysteresis_momentum_signals(
+        days,
+        benchmark_bars=benchmark_tuple,
+        universe=universe,
+        lookback_sessions=lookback_sessions,
+        max_positions=max_positions,
+        entry_rank=entry_rank,
+        hold_rank=hold_rank,
+        regime_sma_sessions=regime_sma_sessions,
+    )
+    return _run_from_signals(
+        experiment_id=experiment_id,
+        daily_bars=days,
+        benchmark_bars=benchmark_tuple,
+        signals=signals,
+        starting_cash=starting_cash,
+        max_positions=max_positions,
+        slippage_rate=slippage_rate,
+        complete_years=complete_years,
+        annual_turnover_limit=annual_turnover_limit,
+        untradeable_symbols_by_date=untradeable_symbols_by_date,
+        regime_exposure=summarize_regime_exposure(
+            days,
+            benchmark_bars=benchmark_tuple,
+            weekly_signals=signals,
+            regime_sma_sessions=regime_sma_sessions,
+        ),
+    )
+
+
 def _run_from_signals(
     *,
     experiment_id: str,
     daily_bars: Iterable[DailyBars],
     benchmark_bars: Iterable[TriBenchmarkBar],
-    signals: tuple[MomentumSignal, ...],
+    signals: tuple[MomentumSignal | RegimeFilteredMomentumSignal, ...],
     starting_cash: Decimal | str | int,
     max_positions: int,
     slippage_rate: Decimal | str | int,
     complete_years: Iterable[int],
     annual_turnover_limit: int,
     untradeable_symbols_by_date: Mapping[date, Iterable[str]] | None,
+    regime_exposure: RegimeExposureSummary | None = None,
 ) -> Phase1ExperimentRun:
     clean_experiment_id = _experiment_id(experiment_id)
     days = tuple(daily_bars)
@@ -163,6 +220,7 @@ def _run_from_signals(
         execution_costs=execution_costs,
         turnover=turnover,
         performance=performance,
+        regime_exposure=regime_exposure,
     )
 
 

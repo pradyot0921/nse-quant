@@ -12,6 +12,7 @@ from nse_quant.backtest.execution import ExecutionCostResult
 from nse_quant.backtest.portfolio import FillSide, PortfolioFill, PortfolioSnapshot
 from nse_quant.backtest.turnover import TurnoverEvaluation
 from nse_quant.reporting.performance import PerformanceSummary
+from nse_quant.strategies.momentum import RegimeExposureSummary
 
 
 MONEY = Decimal("0.01")
@@ -47,7 +48,14 @@ class Phase1ReportStats:
 
 
 @dataclass(frozen=True)
+class ReturnConcentrationSummary:
+    max_stock_positive_contribution_share: Decimal | None
+    max_calendar_year_positive_contribution_share: Decimal | None
+
+
+@dataclass(frozen=True)
 class _TradeOutcome:
+    symbol: str
     entry_date: date
     exit_date: date
     gross_pnl: Decimal
@@ -77,6 +85,9 @@ def write_phase1_markdown_report(
     fills: Iterable[PortfolioFill] = (),
     portfolio_snapshots: Iterable[PortfolioSnapshot] = (),
     slippage_model: str = "not specified",
+    regime_exposure: RegimeExposureSummary | None = None,
+    complete_years: Iterable[int] = (),
+    comparison_rows: Iterable[tuple[str, str, str]] = (),
     warnings: Iterable[str] = DEFAULT_RESEARCH_WARNINGS,
     notes: Iterable[str] = (),
 ) -> Path:
@@ -89,6 +100,12 @@ def write_phase1_markdown_report(
         transaction_costs=total_costs,
         fills=fills,
         portfolio_snapshots=portfolio_snapshots,
+    )
+    concentration = summarize_return_concentration(
+        fills=fills,
+        portfolio_snapshots=portfolio_snapshots,
+        starting_nav=performance.strategy_start_nav,
+        complete_years=complete_years,
     )
     drawdown_status = "PASS" if performance.drawdown_gate_passed else "FAIL"
     turnover_status = "PASS" if turnover.passed else "FAIL"
@@ -138,6 +155,12 @@ def write_phase1_markdown_report(
         f"| Average win / average loss ratio | {_display(report_stats.average_win_loss_ratio)} |",
         f"| Expectancy per completed trade | {_display(report_stats.expectancy_per_completed_trade)} |",
         "",
+    ]
+    _append_regime_section(lines, regime_exposure)
+    _append_concentration_section(lines, concentration)
+    _append_comparison_section(lines, comparison_rows)
+    lines.extend(
+        [
         "## Benchmark",
         "",
         "| Metric | Value |",
@@ -167,7 +190,8 @@ def write_phase1_markdown_report(
         "",
         "## Research Warnings",
         "",
-    ]
+        ]
+    )
     lines.extend(f"- {warning}" for warning in tuple(warnings))
     lines.extend(["", "## Notes", ""])
     note_tuple = tuple(notes)
@@ -222,6 +246,44 @@ def summarize_phase1_report_stats(
     )
 
 
+def summarize_return_concentration(
+    *,
+    fills: Iterable[PortfolioFill] = (),
+    portfolio_snapshots: Iterable[PortfolioSnapshot] = (),
+    starting_nav: Decimal,
+    complete_years: Iterable[int] = (),
+) -> ReturnConcentrationSummary:
+    outcomes = _trade_outcomes(fills)
+    positive_by_symbol: dict[str, Decimal] = {}
+    for outcome in outcomes:
+        if outcome.net_pnl > ZERO:
+            positive_by_symbol[outcome.symbol] = (
+                positive_by_symbol.get(outcome.symbol, ZERO) + outcome.net_pnl
+            )
+
+    snapshots = tuple(sorted(portfolio_snapshots, key=lambda item: item.trade_date))
+    positive_by_year: dict[int, Decimal] = {}
+    prior_nav = starting_nav
+    for year in tuple(sorted(set(complete_years))):
+        year_snapshots = tuple(
+            snapshot for snapshot in snapshots if snapshot.trade_date.year == year
+        )
+        if not year_snapshots:
+            continue
+        year_end_nav = year_snapshots[-1].nav
+        gain = year_end_nav - prior_nav
+        if gain > ZERO:
+            positive_by_year[year] = gain
+        prior_nav = year_end_nav
+
+    return ReturnConcentrationSummary(
+        max_stock_positive_contribution_share=_max_positive_share(positive_by_symbol),
+        max_calendar_year_positive_contribution_share=_max_positive_share(
+            positive_by_year
+        ),
+    )
+
+
 def _total_costs(execution_costs: Iterable[ExecutionCostResult]) -> Decimal:
     return sum((execution.total_cost for execution in execution_costs), Decimal("0.00"))
 
@@ -271,6 +333,7 @@ def _trade_outcomes(fills: Iterable[PortfolioFill]) -> tuple[_TradeOutcome, ...]
             if lot.remaining_quantity == 0:
                 outcomes.append(
                     _TradeOutcome(
+                        symbol=fill.symbol,
                         entry_date=lot.entry_date,
                         exit_date=fill.trade_date,
                         gross_pnl=_money(lot.gross_pnl),
@@ -280,6 +343,70 @@ def _trade_outcomes(fills: Iterable[PortfolioFill]) -> tuple[_TradeOutcome, ...]
                 del lots[0]
 
     return tuple(outcomes)
+
+
+def _max_positive_share(values: dict[object, Decimal]) -> Decimal | None:
+    positive = tuple(amount for amount in values.values() if amount > ZERO)
+    total = sum(positive, ZERO)
+    if total == ZERO:
+        return None
+    return _metric(max(positive) / total)
+
+
+def _append_regime_section(
+    lines: list[str], regime_exposure: RegimeExposureSummary | None
+) -> None:
+    if regime_exposure is None:
+        return
+    lines.extend(
+        [
+            "## Market Regime",
+            "",
+            "| Metric | Value |",
+            "| --- | ---: |",
+            f"| Risk-on sessions | {regime_exposure.risk_on_sessions} |",
+            f"| Risk-off sessions | {regime_exposure.risk_off_sessions} |",
+            f"| Regime unavailable sessions | {regime_exposure.unavailable_sessions} |",
+            f"| Risk-on share after SMA available | {_display(_optional_metric(regime_exposure.risk_on_share))} |",
+            f"| Risk-off share after SMA available | {_display(_optional_metric(regime_exposure.risk_off_share))} |",
+            f"| Weekly regime state changes | {regime_exposure.weekly_state_changes} |",
+            "",
+        ]
+    )
+
+
+def _append_concentration_section(
+    lines: list[str], concentration: ReturnConcentrationSummary
+) -> None:
+    lines.extend(
+        [
+            "## Return Concentration",
+            "",
+            "| Metric | Value |",
+            "| --- | ---: |",
+            f"| Maximum stock positive contribution share | {_display(concentration.max_stock_positive_contribution_share)} |",
+            f"| Maximum calendar-year positive contribution share | {_display(concentration.max_calendar_year_positive_contribution_share)} |",
+            "",
+        ]
+    )
+
+
+def _append_comparison_section(
+    lines: list[str], comparison_rows: Iterable[tuple[str, str, str]]
+) -> None:
+    rows = tuple(comparison_rows)
+    if not rows:
+        return
+    lines.extend(
+        [
+            "## Direct Candidate Comparison",
+            "",
+            "| Metric | Current candidate | B003 research |",
+            "| --- | ---: | ---: |",
+        ]
+    )
+    lines.extend(f"| {metric} | {current} | {b003} |" for metric, current, b003 in rows)
+    lines.append("")
 
 
 def _average_holding_period(outcomes: tuple[_TradeOutcome, ...]) -> Decimal | None:
@@ -335,6 +462,12 @@ def _display(value: Decimal | None) -> str:
     if value is None:
         return "N/A"
     return str(value)
+
+
+def _optional_metric(value: Decimal | None) -> Decimal | None:
+    if value is None:
+        return None
+    return _metric(value)
 
 
 def _metric(value: Decimal) -> Decimal:
