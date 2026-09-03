@@ -11,7 +11,7 @@ def rows():
         return tuple(csv.DictReader(handle))
 
 
-def test_phase1_ledger_references_frozen_universe_and_dataset_versions():
+def test_experiment_ledger_references_frozen_universe_and_dataset_versions():
     expected_ids = {
         "B001",
         "B001-S015",
@@ -19,6 +19,8 @@ def test_phase1_ledger_references_frozen_universe_and_dataset_versions():
         "B002-S015",
         "B003",
         "B003-S015",
+        "B004",
+        "B004-S015",
     }
     ledger_rows = rows()
     status_by_id = {row["experiment_id"]: row["status"] for row in ledger_rows}
@@ -76,7 +78,36 @@ def test_phase1_ledger_records_b003_research_result_only():
     assert "validation period not inspected" in b003["notes"]
 
 
-def test_unrun_phase1_ledger_result_columns_remain_blank():
+def test_phase2_b004_rows_are_preregistered_and_blank():
+    by_id = {row["experiment_id"]: row for row in rows()}
+    b004 = by_id["B004"]
+    robust = by_id["B004-S015"]
+
+    assert b004["status"] == "PLANNED"
+    assert b004["research_period"] == "2016-01-01..2022-12-31"
+    assert b004["validation_period"] == "2023-01-01..2026-08-19"
+    assert "SMA200" in b004["strategy"]
+    assert "risk_on=TRI>SMA200" in b004["parameters"]
+    assert "candidate 1 of maximum 3" in b004["notes"]
+
+    assert robust["status"] == "PLANNED"
+    assert robust["slippage_model"] == "adverse deterministic slippage 0.15% robustness"
+    assert "Run only if B004 passes every baseline Phase 2 promotion gate" in robust["notes"]
+
+    result_columns = (
+        "cagr",
+        "max_drawdown",
+        "sharpe",
+        "sortino",
+        "calmar",
+        "turnover",
+        "net_return",
+    )
+    assert all(b004[column] == "" for column in result_columns)
+    assert all(robust[column] == "" for column in result_columns)
+
+
+def test_unrun_experiment_result_columns_remain_blank():
     result_columns = (
         "cagr",
         "max_drawdown",
