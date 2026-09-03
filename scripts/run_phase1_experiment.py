@@ -8,7 +8,10 @@ import csv
 from nse_quant.backtest.data import group_bars_by_date, load_processed_backtest_bars
 from nse_quant.data.benchmark import load_tri_benchmark_csv
 from nse_quant.data.processed_dataset import load_universe_symbols
-from nse_quant.experiments.phase1 import run_weekly_momentum_experiment
+from nse_quant.experiments.phase1 import (
+    run_weekly_hysteresis_momentum_experiment,
+    run_weekly_momentum_experiment,
+)
 from nse_quant.reporting.phase1_report import write_phase1_markdown_report
 from nse_quant.reporting.trade_log import (
     trade_log_rows_from_execution,
@@ -29,10 +32,24 @@ DEFAULT_BENCHMARK = (
 )
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "experiments" / "results"
 SUPPORTED_EXPERIMENTS = {
-    "B001": {"max_positions": 3, "slippage_rate": "0.0005"},
-    "B001-S015": {"max_positions": 3, "slippage_rate": "0.0015"},
-    "B002": {"max_positions": 2, "slippage_rate": "0.0005"},
-    "B002-S015": {"max_positions": 2, "slippage_rate": "0.0015"},
+    "B001": {"kind": "momentum", "max_positions": 3, "slippage_rate": "0.0005"},
+    "B001-S015": {"kind": "momentum", "max_positions": 3, "slippage_rate": "0.0015"},
+    "B002": {"kind": "momentum", "max_positions": 2, "slippage_rate": "0.0005"},
+    "B002-S015": {"kind": "momentum", "max_positions": 2, "slippage_rate": "0.0015"},
+    "B003": {
+        "kind": "hysteresis",
+        "max_positions": 3,
+        "slippage_rate": "0.0005",
+        "entry_rank": 3,
+        "hold_rank": 6,
+    },
+    "B003-S015": {
+        "kind": "hysteresis",
+        "max_positions": 3,
+        "slippage_rate": "0.0015",
+        "entry_rank": 3,
+        "hold_rank": 6,
+    },
 }
 
 
@@ -49,10 +66,7 @@ def main(argv: list[str] | None = None) -> int:
 
     experiment_id = args.experiment_id.strip().upper()
     if experiment_id not in SUPPORTED_EXPERIMENTS:
-        raise SystemExit(
-            f"{experiment_id} is not supported by this runner yet; "
-            "B003 requires the hysteresis runner."
-        )
+        raise SystemExit(f"{experiment_id} is not supported by this runner")
 
     ledger_row = _ledger_row(Path(args.ledger), experiment_id)
     start_date, end_date = _period_dates(ledger_row, args.period)
@@ -68,15 +82,12 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     config = SUPPORTED_EXPERIMENTS[experiment_id]
-    result = run_weekly_momentum_experiment(
+    result = _run_experiment(
+        config=config,
         experiment_id=experiment_id,
         daily_bars=group_bars_by_date(bars),
         benchmark_bars=benchmark_bars,
         universe=load_universe_symbols(args.universe),
-        starting_cash="50000",
-        lookback_sessions=60,
-        max_positions=int(config["max_positions"]),
-        slippage_rate=str(config["slippage_rate"]),
         complete_years=_complete_years(start_date, end_date),
     )
 
@@ -117,6 +128,35 @@ def main(argv: list[str] | None = None) -> int:
         f"{'PASS' if result.performance.drawdown_gate_passed else 'FAIL'}"
     )
     return 0
+
+
+def _run_experiment(
+    *,
+    config: dict[str, object],
+    experiment_id: str,
+    daily_bars,
+    benchmark_bars,
+    universe,
+    complete_years: tuple[int, ...],
+):
+    common = {
+        "experiment_id": experiment_id,
+        "daily_bars": daily_bars,
+        "benchmark_bars": benchmark_bars,
+        "universe": universe,
+        "starting_cash": "50000",
+        "lookback_sessions": 60,
+        "max_positions": int(config["max_positions"]),
+        "slippage_rate": str(config["slippage_rate"]),
+        "complete_years": complete_years,
+    }
+    if config["kind"] == "hysteresis":
+        return run_weekly_hysteresis_momentum_experiment(
+            **common,
+            entry_rank=int(config["entry_rank"]),
+            hold_rank=int(config["hold_rank"]),
+        )
+    return run_weekly_momentum_experiment(**common)
 
 
 def _ledger_row(path: Path, experiment_id: str) -> dict[str, str]:

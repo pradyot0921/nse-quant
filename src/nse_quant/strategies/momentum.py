@@ -67,6 +67,79 @@ def generate_weekly_momentum_signals(
     return tuple(signals)
 
 
+def generate_weekly_hysteresis_momentum_signals(
+    daily_bars: Iterable[DailyBars],
+    *,
+    universe: Iterable[str],
+    lookback_sessions: int = 60,
+    max_positions: int = 3,
+    entry_rank: int = 3,
+    hold_rank: int = 6,
+) -> tuple[MomentumSignal, ...]:
+    """Rank weekly momentum with explicit entry and hold thresholds."""
+
+    days = tuple(sorted(daily_bars, key=lambda item: item.trade_date))
+    _validate_days(days)
+    symbols = _symbols(universe)
+    _validate_positive_int(lookback_sessions, "lookback_sessions")
+    _validate_positive_int(max_positions, "max_positions")
+    _validate_positive_int(entry_rank, "entry_rank")
+    _validate_positive_int(hold_rank, "hold_rank")
+    if entry_rank > hold_rank:
+        raise ValueError("entry_rank must be less than or equal to hold_rank")
+
+    signals = []
+    previous_desired: tuple[str, ...] = ()
+    for index in _weekly_signal_indices(days):
+        if index < lookback_sessions:
+            continue
+        scores = _rank_day(
+            days[index],
+            days[index - lookback_sessions],
+            symbols,
+        )
+        desired = _hysteresis_desired_symbols(
+            scores=scores,
+            previous_desired=previous_desired,
+            max_positions=max_positions,
+            entry_rank=entry_rank,
+            hold_rank=hold_rank,
+        )
+        signals.append(
+            MomentumSignal(
+                signal_date=days[index].trade_date,
+                desired_symbols=desired,
+                scores=scores,
+            )
+        )
+        previous_desired = desired
+
+    return tuple(signals)
+
+
+def _hysteresis_desired_symbols(
+    *,
+    scores: tuple[MomentumScore, ...],
+    previous_desired: tuple[str, ...],
+    max_positions: int,
+    entry_rank: int,
+    hold_rank: int,
+) -> tuple[str, ...]:
+    ranks = {score.symbol: score.rank for score in scores}
+    selected = {
+        symbol
+        for symbol in previous_desired
+        if ranks.get(symbol, hold_rank + 1) <= hold_rank
+    }
+
+    for score in scores:
+        if score.rank > entry_rank or len(selected) >= max_positions:
+            break
+        selected.add(score.symbol)
+
+    return tuple(score.symbol for score in scores if score.symbol in selected)
+
+
 def _rank_day(
     current_day: DailyBars,
     lookback_day: DailyBars,
