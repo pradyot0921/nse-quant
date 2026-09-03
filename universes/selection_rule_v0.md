@@ -1,9 +1,10 @@
 # V0 Universe Selection Rule
 
-**Status:** Thresholds pre-registered; universe not frozen yet.
+**Status:** Frozen on 2026-08-24 as `nifty100_v0_20_d037`.
 
-The 20-stock V0 universe must be selected mechanically and committed before B001
-results are viewed.
+The 20-stock V0 universe was selected mechanically and committed before B001
+results were viewed. Do not change this universe for B001, B002, B003, or their
+existing Phase 1 result artifacts.
 
 ## Candidate Source
 
