@@ -156,6 +156,7 @@ def write_phase1_markdown_report(
         f"| Expectancy per completed trade | {_display(report_stats.expectancy_per_completed_trade)} |",
         "",
     ]
+    _append_turnover_detail_section(lines, turnover)
     _append_regime_section(lines, regime_exposure)
     _append_concentration_section(lines, concentration)
     _append_comparison_section(lines, comparison_rows)
@@ -373,6 +374,33 @@ def _append_regime_section(
             "",
         ]
     )
+
+
+def _append_turnover_detail_section(
+    lines: list[str], turnover: TurnoverEvaluation
+) -> None:
+    lines.extend(
+        [
+            "## Annual Turnover Detail",
+            "",
+            "| Year | Completed round trips | Evaluated for limit | Gate |",
+            "| --- | ---: | --- | --- |",
+        ]
+    )
+    failed_years = set(turnover.failed_years)
+    for count in turnover.annual_counts:
+        gate = (
+            "FAIL"
+            if count.year in failed_years
+            else "PASS"
+            if count.evaluated_for_limit
+            else "N/A"
+        )
+        lines.append(
+            f"| {count.year} | {count.completed_round_trips} | "
+            f"{'yes' if count.evaluated_for_limit else 'no'} | {gate} |"
+        )
+    lines.append("")
 
 
 def _append_concentration_section(

@@ -30,7 +30,10 @@ def test_experiment_ledger_references_frozen_universe_and_dataset_versions():
     assert status_by_id["B002"] == "REJECTED"
     assert status_by_id["B003"] == "REJECTED"
     for row in ledger_rows:
-        if row["experiment_id"] not in {"B001", "B002", "B003"}:
+        if row["experiment_id"] not in {"B001", "B002", "B003", "B004"}:
+            if row["experiment_id"] == "B004-S015":
+                assert row["status"] == "NOT_RUN"
+                continue
             assert row["status"] == "PLANNED"
         assert row["universe_version"] == "nifty100_v0_20_d037"
         assert row["data_version"] == "nifty100_v0_adjusted_ohlcv_d039"
@@ -83,16 +86,25 @@ def test_phase2_b004_rows_are_preregistered_and_blank():
     b004 = by_id["B004"]
     robust = by_id["B004-S015"]
 
-    assert b004["status"] == "PLANNED"
+    assert b004["status"] == "REJECTED"
     assert b004["research_period"] == "2016-01-01..2022-12-31"
     assert b004["validation_period"] == "2023-01-01..2026-08-19"
     assert "SMA200" in b004["strategy"]
     assert "risk_on=TRI>SMA200" in b004["parameters"]
-    assert "candidate 1 of maximum 3" in b004["notes"]
+    assert b004["cagr"] == "0.071975"
+    assert b004["max_drawdown"] == "0.306676"
+    assert b004["sharpe"] == "0.446175"
+    assert b004["sortino"] == "0.371170"
+    assert b004["calmar"] == "0.234694"
+    assert b004["turnover"] == "127"
+    assert b004["net_return"] == "0.626643"
+    assert "CAGR gate FAIL" in b004["notes"]
+    assert "Sharpe gate FAIL" in b004["notes"]
+    assert "calendar-year concentration gate FAIL" in b004["notes"]
 
-    assert robust["status"] == "PLANNED"
+    assert robust["status"] == "NOT_RUN"
     assert robust["slippage_model"] == "adverse deterministic slippage 0.15% robustness"
-    assert "Run only if B004 passes every baseline Phase 2 promotion gate" in robust["notes"]
+    assert "Not run because B004 failed frozen baseline promotion gates" in robust["notes"]
 
     result_columns = (
         "cagr",
@@ -103,7 +115,6 @@ def test_phase2_b004_rows_are_preregistered_and_blank():
         "turnover",
         "net_return",
     )
-    assert all(b004[column] == "" for column in result_columns)
     assert all(robust[column] == "" for column in result_columns)
 
 
@@ -119,7 +130,7 @@ def test_unrun_experiment_result_columns_remain_blank():
     )
 
     for row in rows():
-        if row["experiment_id"] in {"B001", "B002", "B003"}:
+        if row["experiment_id"] in {"B001", "B002", "B003", "B004"}:
             continue
         assert all(row[column] == "" for column in result_columns)
 
