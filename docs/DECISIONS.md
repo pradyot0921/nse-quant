@@ -2120,3 +2120,51 @@ rejected before robustness.
 longer eligible under this baseline because B005 failed.
 
 **Rerun required:** No prior B005 result exists.
+
+---
+
+## D-073 — Record Phase 2 interim risk-overlay and beta diagnostics before B006
+
+**Date:** 4 September 2026
+**Status:** Accepted
+
+**Old rule:** After B005 rejection, B006 remained the final unused Phase 2
+baseline slot, but the cross-experiment lesson from B004 and B005 had not been
+recorded as a durable repository artifact.
+
+**New rule:** Before choosing B006, Phase 2 records an interim finding:
+externally motivated risk overlays have now been tested twice and both
+produced the same broad trade-off. B004 and B005 reduced drawdown to roughly
+30%, but both sacrificed more than half of B003's CAGR and both lowered Sharpe.
+B005 also showed that continuous exposure scaling can materially increase
+turnover under the delivery-cost model.
+
+The B003 beta diagnostic reconstructs the deterministic B003 daily NAV series
+from committed research-period inputs and verifies that it reproduces the
+committed B003 report metrics. Daily simple-return regression of B003 on the
+Nifty 100 TRI gives beta `1.016661` and annualized arithmetic alpha `0.014954`.
+This does not support the hypothesis that B003 was only a high-beta index proxy
+with near-zero alpha.
+
+B006 should therefore target a genuinely different return-side mechanism if it
+is used at all. B006 must not be another risk overlay, a B004/B005 parameter
+variant, a B003 momentum-parameter tweak, or a slippage rescue trial.
+
+No B006 candidate was pre-registered, implemented, or run by this diagnostic.
+No robustness row was run. No validation-period strategy output was generated
+or inspected.
+
+**Evidence:** `docs/phase2/PHASE2_INTERIM_FINDINGS_V0.md`,
+`experiments/results/B003_research/phase1_report.md`,
+`experiments/results/B004_research/phase1_report.md`,
+`experiments/results/B005_research/phase1_report.md`,
+`docs/phase2/B004_RESEARCH_REVIEW_V0.md`, and
+`docs/phase2/B005_RESEARCH_REVIEW_V0.md`.
+
+**Reason:** The final Phase 2 baseline slot should be chosen in response to the
+actual research pattern, not by drifting into another risk-control variant
+after two risk-overlay rejections.
+
+**Affected experiments:** B006 selection only.
+
+**Rerun required:** No.
