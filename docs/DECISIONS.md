@@ -1912,3 +1912,37 @@ formula change or rescue trial.
 **Rerun required:** Yes, report regeneration only. The deterministic B004
 research-period run was regenerated from the same frozen inputs and rules to
 replace the incorrect derived concentration value.
+
+---
+
+## D-068 — Promote concentration results to ledger fields before B005
+
+**Date:** 4 September 2026
+**Status:** Accepted
+
+**Old rule:** `experiments/ledger.csv` recorded B004's CAGR, drawdown, Sharpe,
+Sortino, Calmar, turnover, and net return as structured result fields, but its
+stock-concentration and calendar-year-concentration values appeared only in
+the B004 report, review artifact, and decision text.
+
+**New rule:** The experiment ledger has explicit result fields for
+`max_stock_positive_contribution_share` and
+`max_calendar_year_positive_contribution_share`. B004 records the corrected
+stock-concentration value `0.271728` and calendar-year concentration value
+`0.497509`. Closed Phase 1 rows remain blank for these new fields because
+their committed reports did not contain these Phase 2 concentration metrics.
+Unrun robustness rows remain blank.
+
+No strategy was rerun, no robustness run was generated, and no validation
+output was inspected.
+
+**Evidence:** `experiments/ledger.csv` and
+`tests/test_experiment_ledger.py`.
+
+**Reason:** B005/B006 pre-registration and review should read against a ledger
+that carries Phase 2 concentration gates as structured fields, not only as
+prose in review artifacts.
+
+**Affected experiments:** B004 ledger result fields only.
+
+**Rerun required:** No.
