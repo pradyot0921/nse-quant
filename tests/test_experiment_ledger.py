@@ -23,6 +23,8 @@ def test_experiment_ledger_references_frozen_universe_and_dataset_versions():
         "B004-S015",
         "B005",
         "B005-S015",
+        "B006",
+        "B006-S015",
     }
     ledger_rows = rows()
     status_by_id = {row["experiment_id"]: row["status"] for row in ledger_rows}
@@ -38,7 +40,10 @@ def test_experiment_ledger_references_frozen_universe_and_dataset_versions():
                 continue
             assert row["status"] == "PLANNED"
         assert row["universe_version"] == "nifty100_v0_20_d037"
-        assert row["data_version"] == "nifty100_v0_adjusted_ohlcv_d039"
+        if row["experiment_id"] in {"B006", "B006-S015"}:
+            assert row["data_version"] == "nifty100_v0_52w_high_input_warmup_d074"
+        else:
+            assert row["data_version"] == "nifty100_v0_adjusted_ohlcv_d039"
         assert "pending" not in row["universe_version"].lower()
         assert "pending" not in row["data_version"].lower()
 
@@ -197,4 +202,40 @@ def test_unrun_experiment_result_columns_remain_blank():
         if row["experiment_id"] in {"B001", "B002", "B003", "B004", "B005"}:
             continue
         assert all(row[column] == "" for column in result_columns)
+
+
+def test_phase2_b006_rows_are_preregistered_and_blank():
+    by_id = {row["experiment_id"]: row for row in rows()}
+    b006 = by_id["B006"]
+    robust = by_id["B006-S015"]
+
+    assert b006["status"] == "PLANNED"
+    assert b006["research_period"] == "2016-01-01..2022-12-31"
+    assert b006["validation_period"] == "2023-01-01..2026-08-19"
+    assert b006["data_version"] == "nifty100_v0_52w_high_input_warmup_d074"
+    assert "52-week-high proximity" in b006["strategy"]
+    assert "T - 364 calendar days <= d <= T" in b006["parameters"]
+    assert "input_only_warmup=pre-2016 ordinary-session adjusted OHLCV" in b006["parameters"]
+    assert "Phase 2 baseline slot 3 of 3" in b006["notes"]
+    assert "no B006 implementation, data warm-up build, or run yet" in b006["notes"]
+    assert "Validation holdout sealed" in b006["notes"]
+
+    assert robust["status"] == "PLANNED"
+    assert robust["data_version"] == "nifty100_v0_52w_high_input_warmup_d074"
+    assert robust["slippage_model"] == "adverse deterministic slippage 0.15% robustness"
+    assert "Run only if B006 baseline passes" in robust["notes"]
+
+    result_columns = (
+        "cagr",
+        "max_drawdown",
+        "sharpe",
+        "sortino",
+        "calmar",
+        "max_stock_positive_contribution_share",
+        "max_calendar_year_positive_contribution_share",
+        "turnover",
+        "net_return",
+    )
+    assert all(b006[column] == "" for column in result_columns)
+    assert all(robust[column] == "" for column in result_columns)
 
