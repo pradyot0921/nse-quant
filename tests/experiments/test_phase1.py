@@ -11,6 +11,7 @@ from nse_quant.experiments.phase1 import (
     run_weekly_hysteresis_momentum_experiment,
     run_weekly_momentum_experiment,
     run_weekly_regime_filtered_hysteresis_momentum_experiment,
+    run_weekly_volatility_scaled_hysteresis_momentum_experiment,
 )
 
 
@@ -282,3 +283,52 @@ def test_b004_experiment_retries_unfilled_risk_off_exit():
         (FillSide.SELL, "AAA"),
     ]
     assert result.backtest.final_snapshot.positions == ()
+
+
+def test_b005_experiment_uses_volatility_scaled_target_exposure():
+    dates = [
+        date(2026, 1, 1),
+        date(2026, 1, 2),
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+        date(2026, 1, 12),
+    ]
+    daily_bars = [
+        day(dates[0], {"AAA": ("100", "100"), "BBB": ("100", "100")}),
+        day(dates[1], {"AAA": ("110", "110"), "BBB": ("100", "100")}),
+        day(dates[2], {"AAA": ("111", "111"), "BBB": ("100", "100")}),
+        day(dates[3], {"AAA": ("112", "112"), "BBB": ("100", "100")}),
+        day(dates[4], {"AAA": ("112", "112"), "BBB": ("100", "100")}),
+    ]
+
+    result = run_weekly_volatility_scaled_hysteresis_momentum_experiment(
+        experiment_id="B005",
+        daily_bars=daily_bars,
+        benchmark_bars=[
+            benchmark(dates[0], "1000"),
+            benchmark(dates[1], "1005"),
+            benchmark(dates[2], "1010"),
+            benchmark(dates[3], "1015"),
+            benchmark(dates[4], "1020"),
+        ],
+        universe=["AAA", "BBB"],
+        starting_cash="10000",
+        lookback_sessions=1,
+        max_positions=1,
+        entry_rank=1,
+        hold_rank=1,
+        volatility_lookback_sessions=2,
+        target_volatility="1.0",
+        slippage_rate="0",
+        complete_years=[2026],
+    )
+
+    assert result.signals[0].exposure_multiplier == Decimal("0")
+    assert result.signals[0].desired_symbols == ()
+    assert result.signals[1].exposure_multiplier == Decimal("1.000000")
+    assert result.signals[1].desired_symbols == ("AAA",)
+    assert [(fill.side, fill.symbol) for fill in result.fills] == [
+        (FillSide.BUY, "AAA"),
+    ]
+    assert result.volatility_exposure is not None
+    assert result.volatility_exposure.lookback_sessions == 2

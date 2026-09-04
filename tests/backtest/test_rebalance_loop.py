@@ -133,6 +133,63 @@ def test_rebalance_loop_retries_unfilled_full_exit_next_session():
     assert result.ending_state.positions == ()
 
 
+def test_rebalance_loop_applies_target_exposure_on_next_session_open():
+    starting_state = PortfolioState(
+        cash="100",
+        positions=(Position("AAA", 10),),
+    )
+
+    result = run_rebalance_loop(
+        [
+            day(DAY1, {"AAA": ("100", "100"), "BBB": ("50", "50")}),
+            day(DAY2, {"AAA": ("100", "100"), "BBB": ("50", "50")}),
+        ],
+        starting_state=starting_state,
+        desired_symbols_by_signal_date={DAY1: ["AAA", "BBB"]},
+        target_exposure_by_signal_date={DAY1: "0.5"},
+        max_positions=2,
+        slippage_rate="0",
+    )
+
+    assert [
+        (fill.side, fill.symbol, fill.quantity)
+        for fill in result.executions[0].costs.portfolio_fills
+    ] == [
+        (FillSide.SELL, "AAA", 7),
+        (FillSide.BUY, "BBB", 5),
+    ]
+
+
+def test_rebalance_loop_retries_unfilled_target_exposure_reduction():
+    starting_state = PortfolioState(
+        cash="0",
+        positions=(Position("AAA", 10),),
+    )
+
+    result = run_rebalance_loop(
+        [
+            day(DAY1, {"AAA": ("100", "100")}),
+            day(DAY2, {"AAA": ("100", "100")}),
+            day(DAY3, {"AAA": ("100", "100")}),
+        ],
+        starting_state=starting_state,
+        desired_symbols_by_signal_date={DAY1: ["AAA"]},
+        target_exposure_by_signal_date={DAY1: "0.5"},
+        max_positions=1,
+        slippage_rate="0",
+        untradeable_symbols_by_date={DAY2: ["AAA"]},
+    )
+
+    assert result.executions[0].unfilled_exit_symbols == ("AAA",)
+    assert result.executions[0].costs.portfolio_fills == ()
+    assert result.snapshots[1].positions[0].quantity == 10
+    assert [
+        (fill.side, fill.symbol, fill.quantity)
+        for fill in result.executions[1].costs.portfolio_fills
+    ] == [(FillSide.SELL, "AAA", 5)]
+    assert result.final_snapshot.positions[0].quantity == 5
+
+
 def test_rebalance_loop_waits_to_enter_replacement_until_exit_fills():
     starting_state = PortfolioState(
         cash="0",

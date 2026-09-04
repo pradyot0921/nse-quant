@@ -12,7 +12,10 @@ from nse_quant.backtest.execution import ExecutionCostResult
 from nse_quant.backtest.portfolio import FillSide, PortfolioFill, PortfolioSnapshot
 from nse_quant.backtest.turnover import TurnoverEvaluation
 from nse_quant.reporting.performance import PerformanceSummary
-from nse_quant.strategies.momentum import RegimeExposureSummary
+from nse_quant.strategies.momentum import (
+    RegimeExposureSummary,
+    VolatilityExposureSummary,
+)
 
 
 MONEY = Decimal("0.01")
@@ -35,6 +38,16 @@ REGIME_SAMPLE_LIMITATION = (
     "THE SMA200 RULE IS EXOGENOUSLY SPECIFIED, BUT ITS OBSERVED PERFORMANCE IN THIS",
     "WINDOW HAS WIDE EPISODE-LEVEL UNCERTAINTY.",
     "DO NOT INTERPRET A GOOD RESULT AS PRECISE ESTIMATION OF REGIME PERFORMANCE.",
+)
+
+REALIZED_VOLATILITY_LIMITATION = (
+    "REALIZED-VOLATILITY LIMITATION:",
+    "B005 USES A 126-SESSION REALIZED-VOLATILITY ESTIMATE ADAPTED FROM",
+    "BARROSO AND SANTA-CLARA'S SIX-MONTH MOMENTUM RISK-MANAGEMENT METHOD.",
+    "THE 2016-2022 RESEARCH WINDOW PROVIDES A LIMITED NUMBER OF INDEPENDENT",
+    "HIGH-VOLATILITY MOMENTUM EPISODES, AND REALIZED VOLATILITY IS ITSELF NOISY.",
+    "DO NOT INTERPRET A GOOD RESULT AS PRECISE ESTIMATION OF AN OPTIMAL VOLATILITY",
+    "TARGET, LOOKBACK, OR EXPOSURE-SCALING RULE.",
 )
 
 
@@ -94,6 +107,7 @@ def write_phase1_markdown_report(
     portfolio_snapshots: Iterable[PortfolioSnapshot] = (),
     slippage_model: str = "not specified",
     regime_exposure: RegimeExposureSummary | None = None,
+    volatility_exposure: VolatilityExposureSummary | None = None,
     complete_years: Iterable[int] = (),
     comparison_rows: Iterable[tuple[str, str, str]] = (),
     warnings: Iterable[str] = DEFAULT_RESEARCH_WARNINGS,
@@ -166,6 +180,7 @@ def write_phase1_markdown_report(
     ]
     _append_turnover_detail_section(lines, turnover)
     _append_regime_section(lines, regime_exposure)
+    _append_volatility_exposure_section(lines, volatility_exposure)
     _append_concentration_section(lines, concentration)
     _append_comparison_section(lines, comparison_rows)
     lines.extend(
@@ -382,6 +397,34 @@ def _append_regime_section(
         ]
     )
     lines.extend(REGIME_SAMPLE_LIMITATION)
+    lines.append("")
+
+
+def _append_volatility_exposure_section(
+    lines: list[str], volatility_exposure: VolatilityExposureSummary | None
+) -> None:
+    if volatility_exposure is None:
+        return
+    lines.extend(
+        [
+            "## Volatility Exposure",
+            "",
+            "| Metric | Value |",
+            "| --- | ---: |",
+            f"| Realized-volatility lookback sessions | {volatility_exposure.lookback_sessions} |",
+            f"| Target volatility | {_display(_optional_metric(volatility_exposure.target_volatility))} |",
+            f"| Minimum exposure multiplier | {_display(volatility_exposure.min_exposure_multiplier)} |",
+            f"| Maximum exposure multiplier | {_display(volatility_exposure.max_exposure_multiplier)} |",
+            f"| Mean exposure multiplier | {_display(volatility_exposure.mean_exposure_multiplier)} |",
+            f"| Median exposure multiplier | {_display(volatility_exposure.median_exposure_multiplier)} |",
+            f"| Weekly exposure changes | {volatility_exposure.weekly_exposure_changes} |",
+            f"| Zero-exposure session share | {_display(_optional_metric(volatility_exposure.zero_exposure_share))} |",
+            f"| Partial-exposure session share | {_display(_optional_metric(volatility_exposure.partial_exposure_share))} |",
+            f"| Full-exposure session share | {_display(_optional_metric(volatility_exposure.full_exposure_share))} |",
+            "",
+        ]
+    )
+    lines.extend(REALIZED_VOLATILITY_LIMITATION)
     lines.append("")
 
 

@@ -11,7 +11,9 @@ from nse_quant.strategies.momentum import (
     generate_weekly_hysteresis_momentum_signals,
     generate_weekly_momentum_signals,
     generate_weekly_regime_filtered_hysteresis_momentum_signals,
+    generate_weekly_volatility_scaled_hysteresis_momentum_signals,
     summarize_regime_exposure,
+    summarize_volatility_exposure,
 )
 
 
@@ -371,3 +373,124 @@ def test_b004_regime_rejects_missing_required_benchmark_observation():
             lookback_sessions=1,
             regime_sma_sessions=2,
         )
+
+
+def test_b005_volatility_scaling_uses_warmup_then_prior_squared_returns():
+    dates = [
+        date(2026, 1, 1),
+        date(2026, 1, 2),
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+    ]
+    daily = [
+        day(dates[0], {"AAA": "100", "BBB": "100"}),
+        day(dates[1], {"AAA": "110", "BBB": "100"}),
+        day(dates[2], {"AAA": "111", "BBB": "100"}),
+        day(dates[3], {"AAA": "112", "BBB": "100"}),
+    ]
+    reference_nav = {
+        dates[0]: Decimal("100.00"),
+        dates[1]: Decimal("101.00"),
+        dates[2]: Decimal("102.01"),
+        dates[3]: Decimal("103.0301"),
+    }
+
+    signals = generate_weekly_volatility_scaled_hysteresis_momentum_signals(
+        daily,
+        reference_nav_by_date=reference_nav,
+        universe=["AAA", "BBB"],
+        lookback_sessions=1,
+        max_positions=1,
+        entry_rank=1,
+        hold_rank=1,
+        volatility_lookback_sessions=2,
+        target_volatility="0.12",
+    )
+
+    assert [signal.signal_date for signal in signals] == [dates[1], dates[3]]
+    assert signals[0].realized_volatility is None
+    assert signals[0].exposure_multiplier == Decimal("0")
+    assert signals[0].desired_symbols == ()
+    assert signals[1].realized_volatility == Decimal("0.158745")
+    assert signals[1].exposure_multiplier == Decimal("0.755929")
+    assert signals[1].desired_symbols == ("AAA",)
+
+
+def test_b005_volatility_scaling_caps_exposure_at_one():
+    dates = [
+        date(2026, 1, 1),
+        date(2026, 1, 2),
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+    ]
+    daily = [
+        day(dates[0], {"AAA": "100"}),
+        day(dates[1], {"AAA": "101"}),
+        day(dates[2], {"AAA": "102"}),
+        day(dates[3], {"AAA": "103"}),
+    ]
+    reference_nav = {
+        dates[0]: Decimal("100.00"),
+        dates[1]: Decimal("101.00"),
+        dates[2]: Decimal("102.01"),
+        dates[3]: Decimal("103.0301"),
+    }
+
+    signals = generate_weekly_volatility_scaled_hysteresis_momentum_signals(
+        daily,
+        reference_nav_by_date=reference_nav,
+        universe=["AAA"],
+        lookback_sessions=1,
+        volatility_lookback_sessions=2,
+        target_volatility="1.00",
+    )
+
+    assert signals[-1].exposure_multiplier == Decimal("1.000000")
+
+
+def test_b005_volatility_exposure_summary_counts_sessions_and_changes():
+    dates = [
+        date(2026, 1, 1),
+        date(2026, 1, 2),
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+        date(2026, 1, 12),
+        date(2026, 1, 13),
+    ]
+    daily = [
+        day(trade_date, {"AAA": str(100 + index)})
+        for index, trade_date in enumerate(dates)
+    ]
+    reference_nav = {
+        dates[0]: Decimal("100.00"),
+        dates[1]: Decimal("101.00"),
+        dates[2]: Decimal("102.01"),
+        dates[3]: Decimal("103.0301"),
+        dates[4]: Decimal("104.060401"),
+        dates[5]: Decimal("105.10100501"),
+    }
+    weekly_signals = generate_weekly_volatility_scaled_hysteresis_momentum_signals(
+        daily,
+        reference_nav_by_date=reference_nav,
+        universe=["AAA"],
+        lookback_sessions=1,
+        volatility_lookback_sessions=2,
+        target_volatility="0.12",
+    )
+
+    summary = summarize_volatility_exposure(
+        daily,
+        weekly_signals=weekly_signals,
+        volatility_lookback_sessions=2,
+        target_volatility="0.12",
+    )
+
+    assert summary.lookback_sessions == 2
+    assert summary.target_volatility == Decimal("0.12")
+    assert summary.min_exposure_multiplier == Decimal("0")
+    assert summary.max_exposure_multiplier == Decimal("0.755929")
+    assert summary.weekly_exposure_changes == 1
+    assert summary.zero_exposure_sessions == 3
+    assert summary.partial_exposure_sessions == 3
+    assert summary.full_exposure_sessions == 0
+    assert summary.zero_exposure_share == Decimal("0.500000")
