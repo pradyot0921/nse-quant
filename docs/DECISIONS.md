@@ -2168,3 +2168,63 @@ after two risk-overlay rejections.
 **Affected experiments:** B006 selection only.
 
 **Rerun required:** No.
+
+---
+
+## D-074 — Pre-register B006 52-week-high proximity ranking
+
+**Date:** 4 September 2026
+**Status:** Accepted
+
+**Old rule:** After B005 was rejected and the interim Phase 2 findings were
+recorded, B006 remained the final unused Phase 2 baseline slot, but no B006
+return-side mechanism, parameters, gates, data requirements, or ledger rows had
+been pre-registered.
+
+**New rule:** B006 is pre-registered as Phase 2 baseline slot 3 of 3. It tests
+a George/Hwang-style 52-week-high proximity stock-ranking signal while keeping
+the existing B003 portfolio wrapper: weekly rebalance, three maximum positions,
+entry rank `<=3`, hold while rank `<=6`, equal-weight long/cash sizing,
+existing execution, current baseline costs, and 0.05% adverse deterministic
+slippage.
+
+The B006 ranking score is:
+
+```text
+PH52(i,T) =
+adjusted_close(i,T)
+/
+max(adjusted_close(i,d) for ordinary sessions d where T - 364 calendar days <= d <= T)
+```
+
+Higher `PH52` ranks better. The signal-date close is included because the
+decision is made after the close and executed no earlier than the next eligible
+session open. Observations after the signal date are prohibited.
+
+B006 names a required input-only warm-up data version:
+`nifty100_v0_52w_high_input_warmup_d074`. This warm-up history is for signal
+construction only; performance still begins on `2016-01-01`. If the warm-up
+history cannot be built cleanly under deterministic V0 data and
+corporate-action rules, B006 must be cancelled before implementation or
+execution.
+
+`B006-S015` is pre-registered as the only B006 robustness row and changes only
+adverse deterministic slippage from 0.05% to 0.15%. It may run only if B006
+passes every baseline research-period promotion gate.
+
+No B006 data build exists yet. No B006 implementation exists yet. No B006
+research run exists yet. No B006-S015 robustness run exists yet. No
+validation-period strategy output was generated or inspected.
+
+**Evidence:** `docs/validation/B006_PREREGISTRATION_V0.md`,
+`experiments/ledger.csv`, `README.md`, and the B006 pre-registration tests.
+
+**Reason:** The B004/B005 interim finding argues against spending the final
+baseline slot on another risk overlay. B006 uses an externally motivated
+return-ranking variable that is materially different from raw 60-session
+relative momentum while preserving the existing portfolio machinery for a
+clean test.
+
+**Affected experiments:** B006 and B006-S015.
+
+**Rerun required:** No.
