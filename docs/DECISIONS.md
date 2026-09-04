@@ -1946,3 +1946,51 @@ prose in review artifacts.
 **Affected experiments:** B004 ledger result fields only.
 
 **Rerun required:** No.
+
+---
+
+## D-069 — Pre-register B005 realized-volatility exposure scaling
+
+**Date:** 4 September 2026
+**Status:** Accepted
+
+**Old rule:** After B004 was rejected, the next Phase 2 baseline slot was
+available but no B005 mechanism, parameters, gates, or ledger rows had been
+pre-registered.
+
+**New rule:** B005 is pre-registered as Phase 2 baseline slot 2 of 3. It tests
+a Barroso/Santa-Clara-style realized-volatility exposure overlay on the frozen
+B003 weekly relative-momentum/hysteresis strategy. The realized-volatility
+lookback is fixed at prior 6 months of daily momentum returns, adapted to 126
+ordinary NSE sessions, and the target volatility is fixed at 12% annualized.
+
+B005 is a long/cash, no-leverage repository adaptation:
+
+```text
+raw_multiplier = 0.12 / realized_volatility
+exposure_multiplier = min(1.0, raw_multiplier)
+```
+
+The 100% cap is a project feasibility constraint because the current strategy
+surface is cash-equity delivery-style long/cash exposure, not the original
+self-financing long-short WML factor.
+
+`B005-S015` is pre-registered as the only B005 robustness row and changes only
+adverse deterministic slippage from 0.05% to 0.15%. It may run only if B005
+passes every baseline research-period promotion gate.
+
+No B005 implementation exists yet. No B005 research run exists yet. No
+B005-S015 robustness run exists yet. No validation-period strategy output was
+generated or inspected.
+
+**Evidence:** `docs/validation/B005_PREREGISTRATION_V0.md`,
+`experiments/ledger.csv`, `README.md`, and the B005 pre-registration tests.
+
+**Reason:** B005 is externally motivated by published momentum risk-management
+research and is materially different from B004's binary Nifty 100 TRI SMA200
+trend filter. It freezes the relevant parameters before implementation or
+execution, keeping the validation holdout sealed.
+
+**Affected experiments:** B005 and B005-S015.
+
+**Rerun required:** No.
