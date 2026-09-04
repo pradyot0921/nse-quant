@@ -105,6 +105,8 @@ def test_phase2_b004_rows_are_preregistered_and_blank():
     assert b004["sharpe"] == "0.446175"
     assert b004["sortino"] == "0.371170"
     assert b004["calmar"] == "0.234694"
+    assert b004["max_stock_positive_contribution_share"] == "0.271728"
+    assert b004["max_calendar_year_positive_contribution_share"] == "0.497509"
     assert b004["turnover"] == "127"
     assert b004["net_return"] == "0.626643"
     assert "CAGR gate FAIL" in b004["notes"]
@@ -121,6 +123,8 @@ def test_phase2_b004_rows_are_preregistered_and_blank():
         "sharpe",
         "sortino",
         "calmar",
+        "max_stock_positive_contribution_share",
+        "max_calendar_year_positive_contribution_share",
         "turnover",
         "net_return",
     )
@@ -134,6 +138,8 @@ def test_unrun_experiment_result_columns_remain_blank():
         "sharpe",
         "sortino",
         "calmar",
+        "max_stock_positive_contribution_share",
+        "max_calendar_year_positive_contribution_share",
         "turnover",
         "net_return",
     )
