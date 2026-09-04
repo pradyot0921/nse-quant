@@ -8,10 +8,12 @@ from nse_quant.data.benchmark import NIFTY100_TRI_NAME, TriBenchmarkBar
 from nse_quant.strategies.momentum import (
     MarketRegime,
     MomentumSignalError,
+    generate_weekly_52_week_high_hysteresis_signals,
     generate_weekly_hysteresis_momentum_signals,
     generate_weekly_momentum_signals,
     generate_weekly_regime_filtered_hysteresis_momentum_signals,
     generate_weekly_volatility_scaled_hysteresis_momentum_signals,
+    summarize_52_week_high_input,
     summarize_regime_exposure,
     summarize_volatility_exposure,
 )
@@ -222,6 +224,130 @@ def test_momentum_rejects_duplicate_daily_dates():
             ],
             universe=["AAA"],
         )
+
+
+def test_b006_52_week_high_proximity_ranks_by_current_close_over_trailing_high():
+    dates = [
+        date(2026, 1, 1),
+        date(2026, 1, 2),
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+    ]
+    daily = [
+        day(dates[0], {"AAA": "100", "BBB": "100", "CCC": "90"}),
+        day(dates[1], {"AAA": "100", "BBB": "100", "CCC": "90"}),
+        day(dates[2], {"AAA": "120", "BBB": "100", "CCC": "90"}),
+        day(dates[3], {"AAA": "98", "BBB": "100", "CCC": "90"}),
+    ]
+
+    signals = generate_weekly_52_week_high_hysteresis_signals(
+        daily,
+        universe=["AAA", "BBB", "CCC"],
+        high_window_calendar_days=7,
+        max_positions=2,
+        entry_rank=2,
+        hold_rank=2,
+    )
+
+    assert [signal.signal_date for signal in signals] == [dates[3]]
+    assert signals[0].desired_symbols == ("BBB", "CCC")
+    assert [(score.symbol, score.proximity) for score in signals[0].scores] == [
+        ("BBB", Decimal("1.000000")),
+        ("CCC", Decimal("1.000000")),
+        ("AAA", Decimal("0.816667")),
+    ]
+
+
+def test_b006_52_week_high_hysteresis_holds_until_hold_rank_breaks():
+    dates = [
+        date(2026, 1, 1),
+        date(2026, 1, 2),
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+        date(2026, 1, 12),
+    ]
+    daily = [
+        day(dates[0], {"AAA": "100", "BBB": "100", "CCC": "100"}),
+        day(dates[1], {"AAA": "100", "BBB": "100", "CCC": "100"}),
+        day(dates[2], {"AAA": "100", "BBB": "100", "CCC": "100"}),
+        day(dates[3], {"AAA": "100", "BBB": "100", "CCC": "80"}),
+        day(dates[4], {"AAA": "70", "BBB": "100", "CCC": "100"}),
+    ]
+
+    signals = generate_weekly_52_week_high_hysteresis_signals(
+        daily,
+        universe=["AAA", "BBB", "CCC"],
+        high_window_calendar_days=7,
+        max_positions=1,
+        entry_rank=1,
+        hold_rank=2,
+    )
+
+    assert [signal.signal_date for signal in signals] == [dates[3], dates[4]]
+    assert [signal.desired_symbols for signal in signals] == [
+        ("AAA",),
+        ("BBB",),
+    ]
+
+
+def test_b006_52_week_high_rejects_incomplete_required_warmup():
+    dates = [
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+    ]
+    daily = [day(trade_date, {"AAA": "100"}) for trade_date in dates]
+
+    with pytest.raises(MomentumSignalError, match="warm-up input is incomplete"):
+        generate_weekly_52_week_high_hysteresis_signals(
+            daily,
+            universe=["AAA"],
+            high_window_calendar_days=7,
+            require_full_window_from=dates[-1],
+        )
+
+
+def test_b006_52_week_high_rejects_missing_symbol_inside_required_window():
+    dates = [
+        date(2026, 1, 1),
+        date(2026, 1, 2),
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+    ]
+    daily = [
+        day(dates[0], {"AAA": "100", "BBB": "100"}),
+        day(dates[1], {"AAA": "100", "BBB": "100"}),
+        day(dates[2], {"BBB": "100"}),
+        day(dates[3], {"AAA": "100", "BBB": "100"}),
+    ]
+
+    with pytest.raises(MomentumSignalError, match="missing 52-week-high adjusted close"):
+        generate_weekly_52_week_high_hysteresis_signals(
+            daily,
+            universe=["AAA", "BBB"],
+            high_window_calendar_days=7,
+        )
+
+
+def test_b006_52_week_high_input_summary_records_first_complete_signal_date():
+    signals = generate_weekly_52_week_high_hysteresis_signals(
+        [
+            day(date(2026, 1, 1), {"AAA": "100"}),
+            day(date(2026, 1, 2), {"AAA": "100"}),
+            day(date(2026, 1, 5), {"AAA": "100"}),
+            day(date(2026, 1, 9), {"AAA": "100"}),
+        ],
+        universe=["AAA"],
+        high_window_calendar_days=7,
+    )
+
+    summary = summarize_52_week_high_input(
+        signals,
+        high_window_calendar_days=7,
+    )
+
+    assert summary.lookback_calendar_days == 7
+    assert summary.first_full_input_signal_date == date(2026, 1, 9)
+    assert summary.missing_or_invalid_scores == 0
 
 
 def test_b004_regime_is_unavailable_until_200_benchmark_observations():

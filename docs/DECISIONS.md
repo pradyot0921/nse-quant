@@ -2228,3 +2228,60 @@ clean test.
 **Affected experiments:** B006 and B006-S015.
 
 **Rerun required:** No.
+
+---
+
+## D-075 - Implement B006 52-week-high proximity ranking
+
+**Date:** 4 September 2026
+**Status:** Accepted
+
+**Old rule:** B006 was pre-registered as a 52-week-high proximity ranking
+hypothesis, but no B006 signal generator, experiment runner support, report
+metadata, or implementation-readiness artifact existed.
+
+**New rule:** B006 implementation is ready for review. The strategy ranks
+stocks weekly by the frozen PH52 score:
+
+```text
+PH52(i,T) =
+adjusted_close(i,T)
+/
+max(adjusted_close(i,d) for ordinary sessions d where T - 364 calendar days <= d <= T)
+```
+
+Higher PH52 ranks better. The signal date is included, no future observation
+may enter the score, and missing adjusted-close input inside the required
+window fails loudly. The B003 wrapper remains unchanged: entry rank `<=3`, hold
+rank `<=6`, three maximum positions, equal-weight long/cash sizing, existing
+execution, current delivery-cost profile, and baseline 0.05% adverse
+deterministic slippage.
+
+The experiment layer separates input-only warm-up data from research-period
+portfolio performance. Warm-up bars may be used only to construct PH52 signals;
+NAV, turnover, and performance begin at the ledger research-period start.
+
+The runner supports B006 and B006-S015 for research-period execution and
+blocks B006 validation-period execution until a later Phase 3 promotion
+artifact exists. Generated B006 reports include the 52-week-high input section,
+mandatory limitation warning, and direct B006-versus-B003 comparison.
+
+No real B006 input-only warm-up dataset was built by this implementation. No
+B006 research run exists yet. No B006-S015 robustness run exists yet. No
+validation-period strategy output was generated or inspected.
+
+**Evidence:** `src/nse_quant/strategies/momentum.py`,
+`src/nse_quant/experiments/phase1.py`,
+`scripts/run_phase1_experiment.py`,
+`src/nse_quant/reporting/phase1_report.py`,
+`docs/phase2/B006_IMPLEMENTATION_STATUS_V0.md`, `README.md`, and the B006
+implementation tests.
+
+**Reason:** B006 can now be implemented and reviewed without spending the
+research result. The next step remains the pre-registered input-only warm-up
+dataset build; if that build cannot be completed cleanly, B006 must be
+cancelled before real research execution.
+
+**Affected experiments:** B006 and B006-S015.
+
+**Rerun required:** No prior B006 result exists.

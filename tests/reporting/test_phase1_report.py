@@ -13,7 +13,7 @@ from nse_quant.reporting.phase1_report import (
     summarize_return_concentration,
     write_phase1_markdown_report,
 )
-from nse_quant.strategies.momentum import RegimeExposureSummary
+from nse_quant.strategies.momentum import FiftyTwoWeekHighInputSummary, RegimeExposureSummary
 from nse_quant.strategies.momentum import VolatilityExposureSummary
 
 
@@ -288,6 +288,35 @@ def test_phase1_report_writes_b005_volatility_exposure_section(tmp_path):
     assert "| Full-exposure session share | 0.500000 |" in text
     assert "REALIZED-VOLATILITY LIMITATION:" in text
     assert "BARROSO AND SANTA-CLARA'S SIX-MONTH MOMENTUM RISK-MANAGEMENT METHOD." in text
+
+
+def test_phase1_report_writes_b006_52_week_high_section(tmp_path):
+    turnover = evaluate_round_trip_turnover([], complete_years=(2026,))
+
+    output = write_phase1_markdown_report(
+        tmp_path / "report.md",
+        experiment_id="B006",
+        strategy_name="weekly 52-week-high proximity ranking with hysteresis",
+        universe_version="nifty100_v0_20_d037",
+        data_version="nifty100_v0_52w_high_input_warmup_d074",
+        performance=summary(),
+        turnover=turnover,
+        complete_years=(2026,),
+        fifty_two_week_high_input=FiftyTwoWeekHighInputSummary(
+            lookback_calendar_days=364,
+            first_full_input_signal_date=date(2026, 1, 2),
+            missing_or_invalid_scores=0,
+        ),
+    )
+
+    text = output.read_text(encoding="utf-8")
+    assert "## 52-Week-High Signal" in text
+    assert "| Lookback calendar days | 364 |" in text
+    assert "| Window rule | `T - 364 calendar days <= d <= T` |" in text
+    assert "| First signal date with complete 52-week-high input | 2026-01-02 |" in text
+    assert "| Missing or invalid PH52 scores | 0 |" in text
+    assert "52-WEEK-HIGH LIMITATION:" in text
+    assert "GEORGE AND HWANG'S ANCHORING-BASED MOMENTUM EVIDENCE." in text
 
 
 def test_return_concentration_reproduces_hand_calculated_fixture():

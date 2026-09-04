@@ -281,6 +281,86 @@ def test_run_phase1_experiment_script_blocks_b005_validation(tmp_path):
         raise AssertionError("B005 validation run was not blocked")
 
 
+def test_run_phase1_experiment_script_supports_b006_research_only_with_warmup(tmp_path):
+    script = load_script()
+    ledger = tmp_path / "ledger.csv"
+    universe = tmp_path / "universe.csv"
+    dataset = tmp_path / "dataset.csv"
+    benchmark = tmp_path / "benchmark.csv"
+    output_dir = tmp_path / "results"
+    sessions = _weekday_sessions(date(2015, 1, 1), 270)
+    research_sessions = [session for session in sessions if session >= date(2016, 1, 1)]
+
+    ledger.write_text(
+        "\n".join(
+            [
+                "experiment_id,strategy,universe_version,data_version,research_period,validation_period,slippage_model",
+                (
+                    "B006,weekly 52-week-high proximity ranking with hysteresis,"
+                    "u_v0,nifty100_v0_52w_high_input_warmup_d074,"
+                    f"{research_sessions[0]}..{research_sessions[-1]},"
+                    "2017-01-01..2017-01-10,"
+                    "adverse deterministic slippage 0.05% baseline"
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    universe.write_text("symbol\nAAA\nBBB\n", encoding="utf-8")
+    dataset.write_text(_dataset_csv(sessions), encoding="utf-8")
+    benchmark.write_text(_benchmark_csv(research_sessions), encoding="utf-8")
+
+    exit_code = script.main(
+        [
+            "--experiment-id",
+            "B006",
+            "--period",
+            "research",
+            "--ledger",
+            str(ledger),
+            "--universe",
+            str(universe),
+            "--dataset",
+            str(dataset),
+            "--benchmark",
+            str(benchmark),
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+
+    assert exit_code == 0
+    report = output_dir / "B006_research" / "phase1_report.md"
+    text = report.read_text(encoding="utf-8")
+    assert "| Experiment | `B006` |" in text
+    assert "## 52-Week-High Signal" in text
+    assert "| Lookback calendar days | 364 |" in text
+    assert "| Missing or invalid PH52 scores | 0 |" in text
+    assert "52-WEEK-HIGH LIMITATION:" in text
+    assert "## Direct Candidate Comparison" in text
+
+
+def test_run_phase1_experiment_script_blocks_b006_validation(tmp_path):
+    script = load_script()
+    ledger = tmp_path / "ledger.csv"
+    ledger.write_text(
+        "\n".join(
+            [
+                "experiment_id,strategy,universe_version,data_version,research_period,validation_period",
+                "B006,weekly 52-week-high proximity ranking with hysteresis,u_v0,d_v0,2016-01-01..2016-01-31,2023-01-01..2023-01-31",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        script.main(["--experiment-id", "B006", "--period", "validation", "--ledger", str(ledger)])
+    except SystemExit as exc:
+        assert "validation run is blocked until a Phase 3 promotion artifact exists" in str(exc)
+    else:
+        raise AssertionError("B006 validation run was not blocked")
+
+
 def _weekday_sessions(start: date, count: int) -> list[date]:
     sessions = []
     current = start

@@ -8,6 +8,7 @@ from nse_quant.backtest.portfolio import FillSide
 from nse_quant.data.benchmark import NIFTY100_TRI_NAME, TriBenchmarkBar
 from nse_quant.experiments.phase1 import (
     Phase1ExperimentError,
+    run_weekly_52_week_high_proximity_experiment,
     run_weekly_hysteresis_momentum_experiment,
     run_weekly_momentum_experiment,
     run_weekly_regime_filtered_hysteresis_momentum_experiment,
@@ -332,3 +333,55 @@ def test_b005_experiment_uses_volatility_scaled_target_exposure():
     ]
     assert result.volatility_exposure is not None
     assert result.volatility_exposure.lookback_sessions == 2
+
+
+def test_b006_experiment_uses_warmup_for_signals_but_not_performance():
+    dates = [
+        date(2026, 1, 1),
+        date(2026, 1, 2),
+        date(2026, 1, 5),
+        date(2026, 1, 9),
+        date(2026, 1, 12),
+    ]
+    daily_bars = [
+        day(dates[0], {"AAA": ("100", "100"), "BBB": ("100", "100")}),
+        day(dates[1], {"AAA": ("120", "120"), "BBB": ("100", "100")}),
+        day(dates[2], {"AAA": ("120", "120"), "BBB": ("100", "100")}),
+        day(dates[3], {"AAA": ("90", "90"), "BBB": ("100", "100")}),
+        day(dates[4], {"AAA": ("90", "90"), "BBB": ("100", "100")}),
+    ]
+
+    result = run_weekly_52_week_high_proximity_experiment(
+        experiment_id="B006",
+        daily_bars=daily_bars,
+        benchmark_bars=[
+            benchmark(dates[3], "1000"),
+            benchmark(dates[4], "1010"),
+        ],
+        universe=["AAA", "BBB"],
+        starting_cash="10000",
+        performance_start_date=dates[3],
+        performance_end_date=dates[4],
+        high_window_calendar_days=7,
+        max_positions=1,
+        entry_rank=1,
+        hold_rank=1,
+        slippage_rate="0",
+        complete_years=[2026],
+    )
+
+    assert [signal.signal_date for signal in result.signals] == [dates[3], dates[4]]
+    assert result.signals[0].desired_symbols == ("BBB",)
+    assert result.signals[0].scores[1].symbol == "AAA"
+    assert result.signals[0].scores[1].proximity == Decimal("0.750000")
+    assert [(fill.side, fill.symbol) for fill in result.fills] == [
+        (FillSide.BUY, "BBB"),
+    ]
+    assert result.performance.start_date == dates[3]
+    assert result.performance.observations == 2
+    assert result.fifty_two_week_high_input is not None
+    assert result.fifty_two_week_high_input.lookback_calendar_days == 7
+    assert (
+        result.fifty_two_week_high_input.first_full_input_signal_date
+        == dates[3]
+    )

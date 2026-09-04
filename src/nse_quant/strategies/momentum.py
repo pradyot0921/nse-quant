@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from enum import StrEnum
 from typing import Iterable, Mapping
@@ -35,6 +35,28 @@ class MomentumSignal:
     signal_date: date
     desired_symbols: tuple[str, ...]
     scores: tuple[MomentumScore, ...]
+
+
+@dataclass(frozen=True)
+class FiftyTwoWeekHighScore:
+    signal_date: date
+    symbol: str
+    rank: int
+    proximity: Decimal
+
+
+@dataclass(frozen=True)
+class FiftyTwoWeekHighSignal:
+    signal_date: date
+    desired_symbols: tuple[str, ...]
+    scores: tuple[FiftyTwoWeekHighScore, ...]
+
+
+@dataclass(frozen=True)
+class FiftyTwoWeekHighInputSummary:
+    lookback_calendar_days: int
+    first_full_input_signal_date: date | None
+    missing_or_invalid_scores: int
 
 
 @dataclass(frozen=True)
@@ -201,6 +223,76 @@ def generate_weekly_hysteresis_momentum_signals(
         signals.append(
             MomentumSignal(
                 signal_date=days[index].trade_date,
+                desired_symbols=desired,
+                scores=scores,
+            )
+        )
+        previous_desired = desired
+
+    return tuple(signals)
+
+
+def generate_weekly_52_week_high_hysteresis_signals(
+    daily_bars: Iterable[DailyBars],
+    *,
+    universe: Iterable[str],
+    high_window_calendar_days: int = 364,
+    max_positions: int = 3,
+    entry_rank: int = 3,
+    hold_rank: int = 6,
+    require_full_window_from: date | None = None,
+) -> tuple[FiftyTwoWeekHighSignal, ...]:
+    """Rank weekly signals by proximity to each stock's trailing 52-week high."""
+
+    days = tuple(sorted(daily_bars, key=lambda item: item.trade_date))
+    _validate_days(days)
+    symbols = _symbols(universe)
+    _validate_positive_int(high_window_calendar_days, "high_window_calendar_days")
+    _validate_positive_int(max_positions, "max_positions")
+    _validate_positive_int(entry_rank, "entry_rank")
+    _validate_positive_int(hold_rank, "hold_rank")
+    if entry_rank > hold_rank:
+        raise ValueError("entry_rank must be less than or equal to hold_rank")
+    if require_full_window_from is not None and not isinstance(
+        require_full_window_from, date
+    ):
+        raise TypeError("require_full_window_from must be a date")
+
+    signals = []
+    previous_desired: tuple[str, ...] = ()
+    for index in _weekly_signal_indices(days):
+        current_day = days[index]
+        window_start = current_day.trade_date - timedelta(
+            days=high_window_calendar_days
+        )
+        if days[0].trade_date > window_start:
+            if (
+                require_full_window_from is not None
+                and current_day.trade_date >= require_full_window_from
+            ):
+                raise MomentumSignalError(
+                    "52-week-high warm-up input is incomplete for "
+                    f"{current_day.trade_date}: earliest available session is "
+                    f"{days[0].trade_date}, required on or before {window_start}"
+                )
+            continue
+
+        scores = _rank_52_week_high_day(
+            current_day,
+            days[: index + 1],
+            symbols,
+            high_window_calendar_days=high_window_calendar_days,
+        )
+        desired = _hysteresis_desired_symbols(
+            scores=scores,
+            previous_desired=previous_desired,
+            max_positions=max_positions,
+            entry_rank=entry_rank,
+            hold_rank=hold_rank,
+        )
+        signals.append(
+            FiftyTwoWeekHighSignal(
+                signal_date=current_day.trade_date,
                 desired_symbols=desired,
                 scores=scores,
             )
@@ -405,6 +497,23 @@ def summarize_volatility_exposure(
     )
 
 
+def summarize_52_week_high_input(
+    weekly_signals: Iterable[FiftyTwoWeekHighSignal],
+    *,
+    high_window_calendar_days: int = 364,
+    missing_or_invalid_scores: int = 0,
+) -> FiftyTwoWeekHighInputSummary:
+    _validate_positive_int(high_window_calendar_days, "high_window_calendar_days")
+    if missing_or_invalid_scores < 0:
+        raise ValueError("missing_or_invalid_scores must not be negative")
+    signals = tuple(sorted(weekly_signals, key=lambda item: item.signal_date))
+    return FiftyTwoWeekHighInputSummary(
+        lookback_calendar_days=high_window_calendar_days,
+        first_full_input_signal_date=signals[0].signal_date if signals else None,
+        missing_or_invalid_scores=missing_or_invalid_scores,
+    )
+
+
 def _hysteresis_desired_symbols(
     *,
     scores: tuple[MomentumScore, ...],
@@ -605,6 +714,61 @@ def _rank_day(
             momentum=momentum,
         )
         for index, (symbol, momentum) in enumerate(ranked, start=1)
+    )
+
+
+def _rank_52_week_high_day(
+    current_day: DailyBars,
+    prior_and_current_days: tuple[DailyBars, ...],
+    symbols: tuple[str, ...],
+    *,
+    high_window_calendar_days: int,
+) -> tuple[FiftyTwoWeekHighScore, ...]:
+    current = current_day.by_symbol
+    window_start = current_day.trade_date - timedelta(days=high_window_calendar_days)
+    window_days = tuple(
+        day
+        for day in prior_and_current_days
+        if window_start <= day.trade_date <= current_day.trade_date
+    )
+    if not window_days or window_days[0].trade_date > window_start:
+        raise MomentumSignalError(
+            "52-week-high window does not cover the full trailing calendar span"
+        )
+
+    ranked = []
+    for symbol in symbols:
+        current_bar = current.get(symbol)
+        if current_bar is None:
+            raise MomentumSignalError(
+                f"missing current adjusted close for {symbol} on {current_day.trade_date}"
+            )
+        highs = []
+        for day in window_days:
+            bar = day.by_symbol.get(symbol)
+            if bar is None:
+                raise MomentumSignalError(
+                    "missing 52-week-high adjusted close for "
+                    f"{symbol} on {day.trade_date}"
+                )
+            highs.append(bar.adjusted_close)
+        trailing_high = max(highs)
+        if trailing_high <= Decimal("0"):
+            raise MomentumSignalError(
+                f"non-positive 52-week high for {symbol} on {current_day.trade_date}"
+            )
+        proximity = _metric(current_bar.adjusted_close / trailing_high)
+        ranked.append((symbol, proximity))
+
+    ranked.sort(key=lambda item: (-item[1], item[0]))
+    return tuple(
+        FiftyTwoWeekHighScore(
+            signal_date=current_day.trade_date,
+            symbol=symbol,
+            rank=index,
+            proximity=proximity,
+        )
+        for index, (symbol, proximity) in enumerate(ranked, start=1)
     )
 
 

@@ -21,11 +21,11 @@ def test_phase1_status_documents_reflect_research_stop():
     phase2_intake = " ".join(PHASE2_INTAKE.read_text(encoding="utf-8").split())
 
     assert "Phase 2 after B005 research rejection" in readme
-    assert "B006 pre-registration ready for review" in readme
+    assert "B006 implementation ready for review" in readme
     assert "B004 and B005 are rejected before robustness" in readme
     assert "B004-S015 and B005-S015 are not run" in readme
-    assert "B006 and B006-S015 are planned only" in readme
-    assert "no B006 implementation or research run has started" in readme
+    assert "B006 and B006-S015 remain planned only" in readme
+    assert "no B006 warm-up dataset build, research run, or robustness run has started" in readme
     assert "B001/B002/B003 concluded with no strategy promoted" in readme
     assert "repo-owned closeout are complete" in readme
     assert "VALIDATION HOLDOUT: uninspected" not in readme
