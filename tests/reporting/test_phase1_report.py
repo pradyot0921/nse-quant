@@ -77,7 +77,7 @@ def test_phase1_report_writes_required_sections_and_warnings(tmp_path):
     )
 
     text = output.read_text(encoding="utf-8")
-    assert "# Phase 1 Experiment Report - B001" in text
+    assert "# Research Experiment Report - B001" in text
     assert "| Universe version | `nifty100_v0_20_d037` |" in text
     assert "| Data version | `nifty100_v0_adjusted_ohlcv_d039` |" in text
     assert "| Net return | 0.100000 |" in text
@@ -241,6 +241,9 @@ def test_phase1_report_writes_b004_regime_and_concentration_sections(tmp_path):
     assert "| Risk-off sessions | 40 |" in text
     assert "| Risk-on share after SMA available | 0.600000 |" in text
     assert "| Weekly regime state changes | 3 |" in text
+    assert "REGIME-SAMPLE LIMITATION:" in text
+    assert "THE RESEARCH WINDOW CONTAINS FEW INDEPENDENT BROAD-MARKET REGIME EPISODES." in text
+    assert "THE SMA200 RULE IS EXOGENOUSLY SPECIFIED" in text
     assert "## Return Concentration" in text
     assert "| Maximum stock positive contribution share | 0.600000 |" in text
     assert "| Maximum calendar-year positive contribution share | 0.750000 |" in text
@@ -271,3 +274,29 @@ def test_return_concentration_reproduces_hand_calculated_fixture():
 
     assert summary_result.max_stock_positive_contribution_share == Decimal("0.600000")
     assert summary_result.max_calendar_year_positive_contribution_share == Decimal("0.666667")
+
+
+def test_return_concentration_aggregates_symbol_pnl_before_positive_clamp():
+    fills = (
+        PortfolioFill(date(2026, 1, 2), 1, "AAA", FillSide.BUY, 10, "100.00"),
+        PortfolioFill(date(2026, 1, 3), 1, "AAA", FillSide.SELL, 10, "200.00"),
+        PortfolioFill(date(2026, 1, 4), 1, "AAA", FillSide.BUY, 10, "100.00"),
+        PortfolioFill(date(2026, 1, 5), 1, "AAA", FillSide.SELL, 10, "10.00"),
+        PortfolioFill(date(2026, 1, 6), 1, "BBB", FillSide.BUY, 10, "100.00"),
+        PortfolioFill(date(2026, 1, 7), 1, "BBB", FillSide.SELL, 10, "150.00"),
+        PortfolioFill(date(2026, 1, 8), 1, "CCC", FillSide.BUY, 10, "100.00"),
+        PortfolioFill(date(2026, 1, 9), 1, "CCC", FillSide.SELL, 10, "110.00"),
+        PortfolioFill(date(2026, 1, 10), 1, "CCC", FillSide.BUY, 10, "100.00"),
+        PortfolioFill(date(2026, 1, 11), 1, "CCC", FillSide.SELL, 10, "90.00"),
+        PortfolioFill(date(2026, 1, 12), 1, "DDD", FillSide.BUY, 10, "100.00"),
+        PortfolioFill(date(2026, 1, 13), 1, "DDD", FillSide.SELL, 10, "110.00"),
+        PortfolioFill(date(2026, 1, 14), 1, "DDD", FillSide.BUY, 10, "100.00"),
+        PortfolioFill(date(2026, 1, 15), 1, "DDD", FillSide.SELL, 10, "80.00"),
+    )
+
+    summary_result = summarize_return_concentration(
+        fills=fills,
+        starting_nav=Decimal("50000.00"),
+    )
+
+    assert summary_result.max_stock_positive_contribution_share == Decimal("0.833333")

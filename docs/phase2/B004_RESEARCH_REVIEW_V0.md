@@ -33,11 +33,17 @@ other strategy-performance output was generated.
 | Maximum drawdown | 0.306676 | <= 0.379228 | PASS |
 | CAGR | 0.071975 | >= 0.137013 | FAIL |
 | Sharpe | 0.446175 | >= 0.837396 | FAIL |
-| Maximum stock positive contribution share | 0.181737 | <= 0.30 | PASS |
+| Maximum stock positive contribution share | 0.271728 | <= 0.30 | PASS |
 | Maximum calendar-year positive contribution share | 0.497509 | <= 0.35 | FAIL |
 
 B004 is rejected because every frozen promotion gate had to pass, and three
 gates failed.
+
+The stock-concentration value above supersedes the originally reported
+`0.181737`. The correction aggregates completed-trade net P&L by symbol first
+and then clamps each symbol aggregate at zero, matching the frozen Phase 2
+definition. B004's rejection is unchanged because CAGR, Sharpe, and
+calendar-year concentration failed independently.
 
 ## Annual Turnover Detail
 

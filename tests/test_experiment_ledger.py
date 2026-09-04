@@ -48,6 +48,9 @@ def test_phase1_ledger_records_b001_research_result_only():
 
     assert b001["cagr"] == "0.173960"
     assert b001["max_drawdown"] == "0.466630"
+    assert b001["sharpe"] == "0.781757"
+    assert b001["sortino"] == "0.745200"
+    assert b001["calmar"] == "0.372801"
     assert b001["turnover"] == "270"
     assert b001["net_return"] == "2.073076"
     assert "validation period not inspected" in b001["notes"]
@@ -60,6 +63,9 @@ def test_phase1_ledger_records_b002_research_result_only():
 
     assert b002["cagr"] == "0.122232"
     assert b002["max_drawdown"] == "0.534276"
+    assert b002["sharpe"] == "0.551182"
+    assert b002["sortino"] == "0.539421"
+    assert b002["calmar"] == "0.228781"
     assert b002["turnover"] == "199"
     assert b002["net_return"] == "1.241707"
     assert "Turnover gate FAIL" in b002["notes"]
@@ -74,6 +80,9 @@ def test_phase1_ledger_records_b003_research_result_only():
 
     assert b003["cagr"] == "0.136461"
     assert b003["max_drawdown"] == "0.512654"
+    assert b003["sharpe"] == "0.636888"
+    assert b003["sortino"] == "0.601536"
+    assert b003["calmar"] == "0.266186"
     assert b003["turnover"] == "124"
     assert b003["net_return"] == "1.448398"
     assert "Turnover gate PASS" in b003["notes"]

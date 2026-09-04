@@ -1834,7 +1834,7 @@ Benchmark Sharpe: 0.837396
 Benchmark maximum drawdown: 0.379228
 Completed round trips: 127
 Transaction costs: 7693.42
-Maximum stock positive contribution share: 0.181737
+Maximum stock positive contribution share: 0.271728
 Maximum calendar-year positive contribution share: 0.497509
 Turnover gate: PASS
 Drawdown gate: PASS
@@ -1860,3 +1860,55 @@ had to pass, B004 is rejected.
 longer eligible under this baseline because B004 failed.
 
 **Rerun required:** No prior B004 result exists.
+
+---
+
+## D-067 — Correct B004 stock-concentration calculation and report warning
+
+**Date:** 4 September 2026
+**Status:** Accepted
+
+**Old rule:** The B004 report generated the stock-concentration statistic by
+discarding losing completed trades before aggregating P&L by symbol. The
+report also omitted the explicit `REGIME-SAMPLE LIMITATION` text required by
+the Phase 2 specification, and its heading still said "Phase 1 Experiment
+Report".
+
+**New rule:** Stock concentration must match the frozen Phase 2 section 8.6
+formula exactly: first aggregate total net realized completed-trade P&L for
+each symbol, then clamp each symbol aggregate at zero before calculating the
+maximum positive contribution share. Every report with B004-style regime
+exposure must also state the required regime-sample limitation text.
+
+The B004 research report was regenerated from the identical frozen
+research-period run only to recompute deterministic report metrics under the
+corrected formula. No B004 parameter, signal rule, execution rule, cost
+assumption, gate, or status changed. No B004-S015 robustness run was generated.
+No validation-period strategy output was generated or inspected.
+
+Corrected B004 stock-concentration result:
+
+```text
+Maximum stock positive contribution share: 0.271728
+Stock concentration gate: PASS
+```
+
+B004 remains `REJECTED` because CAGR, Sharpe, and calendar-year concentration
+failed independently. The correction does not authorize reconsidering B004,
+running B004-S015, tuning the SMA rule, or inspecting validation.
+
+**Evidence:** `src/nse_quant/reporting/phase1_report.py`,
+`tests/reporting/test_phase1_report.py`,
+`experiments/results/B004_research/phase1_report.md`, and
+`docs/phase2/B004_RESEARCH_REVIEW_V0.md`.
+
+**Reason:** This is a preregistration-compliance correction to make the
+implementation match the already-frozen formula. It is not a post-result
+formula change or rescue trial.
+
+**Affected experiments:** B004 report metrics only. B004-S015 remains
+`NOT_RUN`.
+
+**Rerun required:** Yes, report regeneration only. The deterministic B004
+research-period run was regenerated from the same frozen inputs and rules to
+replace the incorrect derived concentration value.

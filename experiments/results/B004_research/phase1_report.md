@@ -1,4 +1,4 @@
-# Phase 1 Experiment Report - B004
+# Research Experiment Report - B004
 
 ## Identity
 
@@ -65,11 +65,17 @@
 | Risk-off share after SMA available | 0.193844 |
 | Weekly regime state changes | 24 |
 
+REGIME-SAMPLE LIMITATION:
+THE RESEARCH WINDOW CONTAINS FEW INDEPENDENT BROAD-MARKET REGIME EPISODES.
+THE SMA200 RULE IS EXOGENOUSLY SPECIFIED, BUT ITS OBSERVED PERFORMANCE IN THIS
+WINDOW HAS WIDE EPISODE-LEVEL UNCERTAINTY.
+DO NOT INTERPRET A GOOD RESULT AS PRECISE ESTIMATION OF REGIME PERFORMANCE.
+
 ## Return Concentration
 
 | Metric | Value |
 | --- | ---: |
-| Maximum stock positive contribution share | 0.181737 |
+| Maximum stock positive contribution share | 0.271728 |
 | Maximum calendar-year positive contribution share | 0.497509 |
 
 ## Direct Candidate Comparison
