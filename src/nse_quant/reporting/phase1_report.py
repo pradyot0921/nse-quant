@@ -1,4 +1,4 @@
-"""Markdown report writer for Phase 1 experiment summaries."""
+"""Markdown report writer for research experiment summaries."""
 
 from __future__ import annotations
 
@@ -27,6 +27,14 @@ DEFAULT_RESEARCH_WARNINGS = (
     "FEW INDEPENDENT BETS - ESTIMATES HAVE WIDE ERROR BARS",
     "CURRENT 2026 COST SCHEDULE APPLIED RETROSPECTIVELY",
     "UNSUPPORTED-CORPORATE-ACTION FILTER APPLIED",
+)
+
+REGIME_SAMPLE_LIMITATION = (
+    "REGIME-SAMPLE LIMITATION:",
+    "THE RESEARCH WINDOW CONTAINS FEW INDEPENDENT BROAD-MARKET REGIME EPISODES.",
+    "THE SMA200 RULE IS EXOGENOUSLY SPECIFIED, BUT ITS OBSERVED PERFORMANCE IN THIS",
+    "WINDOW HAS WIDE EPISODE-LEVEL UNCERTAINTY.",
+    "DO NOT INTERPRET A GOOD RESULT AS PRECISE ESTIMATION OF REGIME PERFORMANCE.",
 )
 
 
@@ -91,7 +99,7 @@ def write_phase1_markdown_report(
     warnings: Iterable[str] = DEFAULT_RESEARCH_WARNINGS,
     notes: Iterable[str] = (),
 ) -> Path:
-    """Write a deterministic Markdown summary for one Phase 1 experiment."""
+    """Write a deterministic Markdown summary for one research experiment."""
 
     output = Path(output_path)
     total_costs = _total_costs(execution_costs)
@@ -111,7 +119,7 @@ def write_phase1_markdown_report(
     turnover_status = "PASS" if turnover.passed else "FAIL"
 
     lines = [
-        f"# Phase 1 Experiment Report - {experiment_id}",
+        f"# Research Experiment Report - {experiment_id}",
         "",
         "## Identity",
         "",
@@ -255,12 +263,11 @@ def summarize_return_concentration(
     complete_years: Iterable[int] = (),
 ) -> ReturnConcentrationSummary:
     outcomes = _trade_outcomes(fills)
-    positive_by_symbol: dict[str, Decimal] = {}
+    net_by_symbol: dict[str, Decimal] = {}
     for outcome in outcomes:
-        if outcome.net_pnl > ZERO:
-            positive_by_symbol[outcome.symbol] = (
-                positive_by_symbol.get(outcome.symbol, ZERO) + outcome.net_pnl
-            )
+        net_by_symbol[outcome.symbol] = (
+            net_by_symbol.get(outcome.symbol, ZERO) + outcome.net_pnl
+        )
 
     snapshots = tuple(sorted(portfolio_snapshots, key=lambda item: item.trade_date))
     positive_by_year: dict[int, Decimal] = {}
@@ -278,7 +285,7 @@ def summarize_return_concentration(
         prior_nav = year_end_nav
 
     return ReturnConcentrationSummary(
-        max_stock_positive_contribution_share=_max_positive_share(positive_by_symbol),
+        max_stock_positive_contribution_share=_max_positive_share(net_by_symbol),
         max_calendar_year_positive_contribution_share=_max_positive_share(
             positive_by_year
         ),
@@ -374,6 +381,8 @@ def _append_regime_section(
             "",
         ]
     )
+    lines.extend(REGIME_SAMPLE_LIMITATION)
+    lines.append("")
 
 
 def _append_turnover_detail_section(
