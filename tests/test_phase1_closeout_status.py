@@ -20,8 +20,9 @@ def test_phase1_status_documents_reflect_research_stop():
     postmortem = " ".join(POSTMORTEM.read_text(encoding="utf-8").split())
     phase2_intake = " ".join(PHASE2_INTAKE.read_text(encoding="utf-8").split())
 
-    assert "Phase 2 B004 research review complete" in readme
+    assert "Phase 2 B005 pre-registration ready for review" in readme
     assert "B004 is rejected before robustness; B004-S015 is not run" in readme
+    assert "B005 and B005-S015 are planned only" in readme
     assert "B001/B002/B003 concluded with no strategy promoted" in readme
     assert "repo-owned closeout are complete" in readme
     assert "VALIDATION HOLDOUT: uninspected" not in readme

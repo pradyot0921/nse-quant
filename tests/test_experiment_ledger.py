@@ -21,6 +21,8 @@ def test_experiment_ledger_references_frozen_universe_and_dataset_versions():
         "B003-S015",
         "B004",
         "B004-S015",
+        "B005",
+        "B005-S015",
     }
     ledger_rows = rows()
     status_by_id = {row["experiment_id"]: row["status"] for row in ledger_rows}
@@ -128,6 +130,40 @@ def test_phase2_b004_rows_are_preregistered_and_blank():
         "turnover",
         "net_return",
     )
+    assert all(robust[column] == "" for column in result_columns)
+
+
+def test_phase2_b005_rows_are_preregistered_and_blank():
+    by_id = {row["experiment_id"]: row for row in rows()}
+    b005 = by_id["B005"]
+    robust = by_id["B005-S015"]
+
+    assert b005["status"] == "PLANNED"
+    assert b005["research_period"] == "2016-01-01..2022-12-31"
+    assert b005["validation_period"] == "2023-01-01..2026-08-19"
+    assert "realized-volatility exposure scaling" in b005["strategy"]
+    assert "volatility_lookback=126 ordinary sessions" in b005["parameters"]
+    assert "target_volatility=0.12 annualized" in b005["parameters"]
+    assert "exposure_multiplier=min(1.0" in b005["parameters"]
+    assert "Phase 2 baseline slot 2 of 3" in b005["notes"]
+    assert "No leverage" in b005["notes"]
+
+    assert robust["status"] == "PLANNED"
+    assert robust["slippage_model"] == "adverse deterministic slippage 0.15% robustness"
+    assert "Run only if B005 baseline passes" in robust["notes"]
+
+    result_columns = (
+        "cagr",
+        "max_drawdown",
+        "sharpe",
+        "sortino",
+        "calmar",
+        "max_stock_positive_contribution_share",
+        "max_calendar_year_positive_contribution_share",
+        "turnover",
+        "net_return",
+    )
+    assert all(b005[column] == "" for column in result_columns)
     assert all(robust[column] == "" for column in result_columns)
 
 
