@@ -2036,3 +2036,30 @@ and keeps validation sealed.
 **Affected experiments:** B005 and B005-S015.
 
 **Rerun required:** No.
+
+---
+
+## D-071 — Correct B005 ledger status note after implementation merge
+
+**Date:** 4 September 2026
+**Status:** Accepted
+
+**Old rule:** After B005 implementation merged, the B005 ledger row still said
+"no B005 implementation or run yet" in its notes field.
+
+**New rule:** The B005 ledger row must distinguish implementation readiness
+from research execution. B005 remains `PLANNED`, but its notes now say it is
+pre-registered and implemented with no B005 research-period run yet.
+
+No B005 real research-period result was generated. No B005-S015 robustness run
+was generated. No validation-period strategy output was generated or inspected.
+
+**Evidence:** `experiments/ledger.csv` and `tests/test_experiment_ledger.py`.
+
+**Reason:** The ledger is the canonical trial registry. Before B005 research
+execution, it must not carry stale implementation-status text that contradicts
+the merged repository state.
+
+**Affected experiments:** B005 only.
+
+**Rerun required:** No.

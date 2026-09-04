@@ -145,6 +145,9 @@ def test_phase2_b005_rows_are_preregistered_and_blank():
     assert "volatility_lookback=126 ordinary sessions" in b005["parameters"]
     assert "target_volatility=0.12 annualized" in b005["parameters"]
     assert "exposure_multiplier=min(1.0" in b005["parameters"]
+    assert "Pre-registered and implemented" in b005["notes"]
+    assert "no B005 research-period run yet" in b005["notes"]
+    assert "no B005 implementation or run yet" not in b005["notes"]
     assert "Phase 2 baseline slot 2 of 3" in b005["notes"]
     assert "No leverage" in b005["notes"]
 
