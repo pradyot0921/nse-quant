@@ -10,6 +10,7 @@ from nse_quant.backtest.data import group_bars_by_date, load_processed_backtest_
 from nse_quant.data.benchmark import load_tri_benchmark_csv
 from nse_quant.data.processed_dataset import load_universe_symbols
 from nse_quant.experiments.phase1 import (
+    run_weekly_52_week_high_proximity_experiment,
     run_weekly_hysteresis_momentum_experiment,
     run_weekly_momentum_experiment,
     run_weekly_regime_filtered_hysteresis_momentum_experiment,
@@ -26,6 +27,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LEDGER = PROJECT_ROOT / "experiments" / "ledger.csv"
 DEFAULT_UNIVERSE = PROJECT_ROOT / "universes" / "nifty100_v0_20.csv"
 DEFAULT_DATASET = PROJECT_ROOT / "data" / "processed" / "nifty100_v0_adjusted_ohlcv.csv"
+DEFAULT_B006_DATASET = (
+    PROJECT_ROOT / "data" / "processed" / "nifty100_v0_52w_high_input_warmup.csv"
+)
 DEFAULT_BENCHMARK = (
     PROJECT_ROOT
     / "data"
@@ -95,6 +99,22 @@ SUPPORTED_EXPERIMENTS = {
         "volatility_lookback_sessions": 126,
         "target_volatility": "0.12",
     },
+    "B006": {
+        "kind": "52_week_high_hysteresis",
+        "max_positions": 3,
+        "slippage_rate": "0.0005",
+        "entry_rank": 3,
+        "hold_rank": 6,
+        "high_window_calendar_days": 364,
+    },
+    "B006-S015": {
+        "kind": "52_week_high_hysteresis",
+        "max_positions": 3,
+        "slippage_rate": "0.0015",
+        "entry_rank": 3,
+        "hold_rank": 6,
+        "high_window_calendar_days": 364,
+    },
 }
 
 
@@ -117,6 +137,8 @@ def main(argv: list[str] | None = None) -> int:
         "B004-S015",
         "B005",
         "B005-S015",
+        "B006",
+        "B006-S015",
     }:
         raise SystemExit(
             f"{experiment_id} validation run is blocked until a Phase 3 "
@@ -125,10 +147,16 @@ def main(argv: list[str] | None = None) -> int:
 
     ledger_row = _ledger_row(Path(args.ledger), experiment_id)
     start_date, end_date = _period_dates(ledger_row, args.period)
+    dataset_path = _dataset_path(args.dataset, experiment_id)
     bars = tuple(
         bar
-        for bar in load_processed_backtest_bars(args.dataset)
-        if start_date <= bar.trade_date <= end_date
+        for bar in load_processed_backtest_bars(dataset_path)
+        if _include_bar_for_period(
+            bar.trade_date,
+            start_date=start_date,
+            end_date=end_date,
+            experiment_id=experiment_id,
+        )
     )
     benchmark_bars = tuple(
         bar
@@ -144,6 +172,8 @@ def main(argv: list[str] | None = None) -> int:
         benchmark_bars=benchmark_bars,
         universe=load_universe_symbols(args.universe),
         complete_years=_complete_years(start_date, end_date),
+        period_start_date=start_date,
+        period_end_date=end_date,
     )
 
     run_dir = Path(args.output_dir) / f"{experiment_id}_{args.period}"
@@ -167,6 +197,7 @@ def main(argv: list[str] | None = None) -> int:
             "Ledger result fields are not updated by this script.",
         ),
         regime_exposure=result.regime_exposure,
+        fifty_two_week_high_input=result.fifty_two_week_high_input,
         volatility_exposure=result.volatility_exposure,
     )
     trade_rows = tuple(
@@ -200,6 +231,8 @@ def _run_experiment(
     benchmark_bars,
     universe,
     complete_years: tuple[int, ...],
+    period_start_date: date,
+    period_end_date: date,
 ):
     common = {
         "experiment_id": experiment_id,
@@ -233,6 +266,17 @@ def _run_experiment(
             volatility_lookback_sessions=int(config["volatility_lookback_sessions"]),
             target_volatility=str(config["target_volatility"]),
         )
+    if config["kind"] == "52_week_high_hysteresis":
+        b006_common = dict(common)
+        del b006_common["lookback_sessions"]
+        return run_weekly_52_week_high_proximity_experiment(
+            **b006_common,
+            entry_rank=int(config["entry_rank"]),
+            hold_rank=int(config["hold_rank"]),
+            high_window_calendar_days=int(config["high_window_calendar_days"]),
+            performance_start_date=period_start_date,
+            performance_end_date=period_end_date,
+        )
     return run_weekly_momentum_experiment(**common)
 
 
@@ -252,8 +296,29 @@ def _slippage_model(row: dict[str, str], config: dict[str, object]) -> str:
     return f"adverse deterministic slippage {config['slippage_rate']}"
 
 
+def _dataset_path(raw_dataset_arg: str, experiment_id: str) -> Path:
+    dataset = Path(raw_dataset_arg)
+    if experiment_id in {"B006", "B006-S015"} and dataset == DEFAULT_DATASET:
+        return DEFAULT_B006_DATASET
+    return dataset
+
+
+def _include_bar_for_period(
+    trade_date: date,
+    *,
+    start_date: date,
+    end_date: date,
+    experiment_id: str,
+) -> bool:
+    if trade_date > end_date:
+        return False
+    if experiment_id in {"B006", "B006-S015"}:
+        return True
+    return trade_date >= start_date
+
+
 def _comparison_rows(experiment_id, result) -> tuple[tuple[str, str, str], ...]:
-    if experiment_id not in {"B004", "B005"}:
+    if experiment_id not in {"B004", "B005", "B006"}:
         return ()
     current = {
         "CAGR": str(result.performance.strategy_cagr),

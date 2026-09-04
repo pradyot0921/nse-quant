@@ -71,8 +71,8 @@ def test_b006_status_is_visible_in_repo_status_documents():
     readme = " ".join(README.read_text(encoding="utf-8").split())
     decisions = " ".join(DECISIONS.read_text(encoding="utf-8").split())
 
-    assert "B006 pre-registration ready for review" in readme
-    assert "B006 and B006-S015 are planned only" in readme
-    assert "no B006 implementation or research run has started" in readme
+    assert "B006 implementation ready for review" in readme
+    assert "B006 and B006-S015 remain planned only" in readme
+    assert "no B006 warm-up dataset build, research run, or robustness run has started" in readme
     assert "D-074" in decisions
     assert "Pre-register B006 52-week-high proximity ranking" in decisions

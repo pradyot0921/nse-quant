@@ -13,6 +13,7 @@ from nse_quant.backtest.portfolio import FillSide, PortfolioFill, PortfolioSnaps
 from nse_quant.backtest.turnover import TurnoverEvaluation
 from nse_quant.reporting.performance import PerformanceSummary
 from nse_quant.strategies.momentum import (
+    FiftyTwoWeekHighInputSummary,
     RegimeExposureSummary,
     VolatilityExposureSummary,
 )
@@ -48,6 +49,17 @@ REALIZED_VOLATILITY_LIMITATION = (
     "HIGH-VOLATILITY MOMENTUM EPISODES, AND REALIZED VOLATILITY IS ITSELF NOISY.",
     "DO NOT INTERPRET A GOOD RESULT AS PRECISE ESTIMATION OF AN OPTIMAL VOLATILITY",
     "TARGET, LOOKBACK, OR EXPOSURE-SCALING RULE.",
+)
+
+FIFTY_TWO_WEEK_HIGH_LIMITATION = (
+    "52-WEEK-HIGH LIMITATION:",
+    "B006 TESTS A 52-WEEK-HIGH PROXIMITY RANKING SIGNAL ADAPTED FROM",
+    "GEORGE AND HWANG'S ANCHORING-BASED MOMENTUM EVIDENCE. THE V0 UNIVERSE",
+    "CONTAINS ONLY 20 LARGE-CAP NSE STOCKS, SO CROSS-SECTIONAL DISPERSION MAY BE",
+    "TOO LIMITED FOR THE EFFECT TO APPEAR. SUPPORTING INDIA-SPECIFIC EVIDENCE",
+    "OVERLAPS THE RESEARCH WINDOW AND IS NOT USED AS AN INDEPENDENT PARAMETER",
+    "SOURCE. DO NOT INTERPRET A GOOD RESULT AS PRECISE ESTIMATION OF A HIGH-WINDOW,",
+    "THRESHOLD, BREAKOUT, OR COMBINED-SIGNAL RULE.",
 )
 
 
@@ -106,6 +118,7 @@ def write_phase1_markdown_report(
     fills: Iterable[PortfolioFill] = (),
     portfolio_snapshots: Iterable[PortfolioSnapshot] = (),
     slippage_model: str = "not specified",
+    fifty_two_week_high_input: FiftyTwoWeekHighInputSummary | None = None,
     regime_exposure: RegimeExposureSummary | None = None,
     volatility_exposure: VolatilityExposureSummary | None = None,
     complete_years: Iterable[int] = (),
@@ -179,6 +192,7 @@ def write_phase1_markdown_report(
         "",
     ]
     _append_turnover_detail_section(lines, turnover)
+    _append_52_week_high_section(lines, fifty_two_week_high_input)
     _append_regime_section(lines, regime_exposure)
     _append_volatility_exposure_section(lines, volatility_exposure)
     _append_concentration_section(lines, concentration)
@@ -428,6 +442,28 @@ def _append_volatility_exposure_section(
     lines.append("")
 
 
+def _append_52_week_high_section(
+    lines: list[str], summary: FiftyTwoWeekHighInputSummary | None
+) -> None:
+    if summary is None:
+        return
+    lines.extend(
+        [
+            "## 52-Week-High Signal",
+            "",
+            "| Metric | Value |",
+            "| --- | ---: |",
+            f"| Lookback calendar days | {summary.lookback_calendar_days} |",
+            "| Window rule | `T - 364 calendar days <= d <= T` |",
+            f"| First signal date with complete 52-week-high input | {_display_date(summary.first_full_input_signal_date)} |",
+            f"| Missing or invalid PH52 scores | {summary.missing_or_invalid_scores} |",
+            "",
+        ]
+    )
+    lines.extend(FIFTY_TWO_WEEK_HIGH_LIMITATION)
+    lines.append("")
+
+
 def _append_turnover_detail_section(
     lines: list[str], turnover: TurnoverEvaluation
 ) -> None:
@@ -542,6 +578,12 @@ def _display(value: Decimal | None) -> str:
     if value is None:
         return "N/A"
     return str(value)
+
+
+def _display_date(value: date | None) -> str:
+    if value is None:
+        return "N/A"
+    return value.isoformat()
 
 
 def _optional_metric(value: Decimal | None) -> Decimal | None:
