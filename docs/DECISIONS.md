@@ -2063,3 +2063,60 @@ the merged repository state.
 **Affected experiments:** B005 only.
 
 **Rerun required:** No.
+
+---
+
+## D-072 — B005 research-period result is rejected before robustness
+
+**Date:** 4 September 2026
+**Status:** Accepted
+
+**Old rule:** B005 was pre-registered, implemented, and ready for its first
+research-period execution. B005-S015 was eligible only if B005 passed every
+frozen baseline promotion gate.
+
+**New rule:** The B005 baseline research-period run is permanently recorded
+and marked `REJECTED`. B005-S015 is marked `NOT_RUN` because B005 failed
+frozen baseline promotion gates. The validation holdout remains sealed.
+
+Before B005 was run, the report runner was corrected to include the
+pre-registered direct B005-versus-B003 comparison section for B005 reports.
+No B005 research output existed before this correction.
+
+The B005 research-period result is:
+
+```text
+Research period: 2016-01-01 through 2022-12-31
+Report observations: 2016-01-01 through 2022-12-30
+Net return: 0.251148
+CAGR: 0.032527
+Maximum drawdown: 0.302637
+Sharpe: 0.332169
+Sortino: 0.303350
+Calmar: 0.107477
+Completed round trips: 253
+Maximum stock positive contribution share: 0.263713
+Maximum calendar-year positive contribution share: 0.494308
+Turnover gate: FAIL
+Drawdown gate: PASS
+CAGR gate: FAIL
+Sharpe gate: FAIL
+Stock concentration gate: PASS
+Calendar-year concentration gate: FAIL
+```
+
+B005-S015 is not run. It is not a rescue trial.
+
+**Evidence:** `experiments/results/B005_research/phase1_report.md`,
+`experiments/results/B005_research/trade_log.csv`,
+`docs/phase2/B005_RESEARCH_REVIEW_V0.md`, `experiments/ledger.csv`,
+`scripts/run_phase1_experiment.py`, and the B005 research-review tests.
+
+**Reason:** B005 improved drawdown but failed CAGR, Sharpe, turnover, and
+calendar-year concentration. Since every frozen gate had to pass, B005 is
+rejected before robustness.
+
+**Affected experiments:** B005 directly. B005-S015 remains unrun and is no
+longer eligible under this baseline because B005 failed.
+
+**Rerun required:** No prior B005 result exists.

@@ -253,7 +253,7 @@ def _slippage_model(row: dict[str, str], config: dict[str, object]) -> str:
 
 
 def _comparison_rows(experiment_id, result) -> tuple[tuple[str, str, str], ...]:
-    if experiment_id != "B004":
+    if experiment_id not in {"B004", "B005"}:
         return ()
     current = {
         "CAGR": str(result.performance.strategy_cagr),

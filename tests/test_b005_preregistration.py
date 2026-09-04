@@ -58,9 +58,12 @@ def test_b005_status_is_visible_in_repo_status_documents():
     readme = " ".join(README.read_text(encoding="utf-8").split())
     decisions = " ".join(DECISIONS.read_text(encoding="utf-8").split())
 
-    assert "Phase 2 B005 implementation ready for review" in readme
-    assert "B005 and B005-S015 are planned only" in readme
+    assert "Phase 2 after B005 research rejection" in readme
+    assert "B004 and B005 are rejected before robustness" in readme
+    assert "B004-S015 and B005-S015 are not run" in readme
     assert "D-069" in decisions
     assert "Pre-register B005 realized-volatility exposure scaling" in decisions
     assert "D-070" in decisions
     assert "Implement B005 realized-volatility exposure scaling" in decisions
+    assert "D-072" in decisions
+    assert "B005 research-period result is rejected before robustness" in decisions

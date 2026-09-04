@@ -20,9 +20,10 @@ def test_phase1_status_documents_reflect_research_stop():
     postmortem = " ".join(POSTMORTEM.read_text(encoding="utf-8").split())
     phase2_intake = " ".join(PHASE2_INTAKE.read_text(encoding="utf-8").split())
 
-    assert "Phase 2 B005 implementation ready for review" in readme
-    assert "B004 is rejected before robustness; B004-S015 is not run" in readme
-    assert "B005 and B005-S015 are planned only" in readme
+    assert "Phase 2 after B005 research rejection" in readme
+    assert "B004 and B005 are rejected before robustness" in readme
+    assert "B004-S015 and B005-S015 are not run" in readme
+    assert "B006 remains the only unused Phase 2 baseline slot" in readme
     assert "B001/B002/B003 concluded with no strategy promoted" in readme
     assert "repo-owned closeout are complete" in readme
     assert "VALIDATION HOLDOUT: uninspected" not in readme
