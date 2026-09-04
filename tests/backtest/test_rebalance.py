@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
@@ -69,6 +70,18 @@ def test_rebalance_holds_symbols_already_desired():
     assert plan.orders == ()
 
 
+def test_rebalance_plan_can_carry_target_exposure_without_forcing_resizes():
+    plan = plan_rebalance_orders(
+        signal_date=DAY,
+        current_state=state(position("AAA", 10)),
+        desired_symbols=["AAA"],
+        target_exposure="0.5",
+    )
+
+    assert plan.orders == ()
+    assert plan.target_exposure == Decimal("0.5")
+
+
 def test_empty_desired_symbols_exits_all_holdings():
     plan = plan_rebalance_orders(
         signal_date=DAY,
@@ -98,4 +111,14 @@ def test_rebalance_rejects_invalid_signal_date():
             signal_date="2026-08-21",
             current_state=state(),
             desired_symbols=[],
+        )
+
+
+def test_rebalance_rejects_invalid_target_exposure():
+    with pytest.raises(ValueError, match="target_exposure"):
+        plan_rebalance_orders(
+            signal_date=DAY,
+            current_state=state(),
+            desired_symbols=[],
+            target_exposure="1.1",
         )

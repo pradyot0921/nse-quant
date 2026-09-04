@@ -18,10 +18,14 @@ from nse_quant.strategies.momentum import (
     RegimeExposureSummary,
     RegimeFilteredMomentumSignal,
     MomentumSignal,
+    VolatilityExposureSummary,
+    VolatilityScaledMomentumSignal,
     generate_weekly_hysteresis_momentum_signals,
     generate_weekly_momentum_signals,
     generate_weekly_regime_filtered_hysteresis_momentum_signals,
+    generate_weekly_volatility_scaled_hysteresis_momentum_signals,
     summarize_regime_exposure,
+    summarize_volatility_exposure,
 )
 
 
@@ -32,13 +36,17 @@ class Phase1ExperimentError(RuntimeError):
 @dataclass(frozen=True)
 class Phase1ExperimentRun:
     experiment_id: str
-    signals: tuple[MomentumSignal | RegimeFilteredMomentumSignal, ...]
+    signals: tuple[
+        MomentumSignal | RegimeFilteredMomentumSignal | VolatilityScaledMomentumSignal,
+        ...
+    ]
     backtest: RebalanceLoopResult
     fills: tuple[PortfolioFill, ...]
     execution_costs: tuple[ExecutionCostResult, ...]
     turnover: TurnoverEvaluation
     performance: PerformanceSummary
     regime_exposure: RegimeExposureSummary | None = None
+    volatility_exposure: VolatilityExposureSummary | None = None
 
 
 def run_weekly_momentum_experiment(
@@ -170,19 +178,104 @@ def run_weekly_regime_filtered_hysteresis_momentum_experiment(
     )
 
 
+def run_weekly_volatility_scaled_hysteresis_momentum_experiment(
+    *,
+    experiment_id: str,
+    daily_bars: Iterable[DailyBars],
+    benchmark_bars: Iterable[TriBenchmarkBar],
+    universe: Iterable[str],
+    starting_cash: Decimal | str | int,
+    lookback_sessions: int = 60,
+    max_positions: int = 3,
+    entry_rank: int = 3,
+    hold_rank: int = 6,
+    volatility_lookback_sessions: int = 126,
+    target_volatility: Decimal | str | int = Decimal("0.12"),
+    slippage_rate: Decimal | str | int = Decimal("0.0005"),
+    complete_years: Iterable[int] = (),
+    annual_turnover_limit: int = 30,
+    untradeable_symbols_by_date: Mapping[date, Iterable[str]] | None = None,
+) -> Phase1ExperimentRun:
+    """Run the frozen B005 volatility-scaled B003 structure."""
+
+    days = tuple(daily_bars)
+    benchmark_tuple = tuple(benchmark_bars)
+    universe_tuple = tuple(universe)
+    reference_signals = generate_weekly_hysteresis_momentum_signals(
+        days,
+        universe=universe_tuple,
+        lookback_sessions=lookback_sessions,
+        max_positions=max_positions,
+        entry_rank=entry_rank,
+        hold_rank=hold_rank,
+    )
+    reference_backtest = run_rebalance_loop(
+        days,
+        starting_state=PortfolioState.starting_cash(starting_cash),
+        desired_symbols_by_signal_date={
+            signal.signal_date: signal.desired_symbols
+            for signal in reference_signals
+        },
+        max_positions=max_positions,
+        slippage_rate=slippage_rate,
+        untradeable_symbols_by_date=untradeable_symbols_by_date,
+    )
+    signals = generate_weekly_volatility_scaled_hysteresis_momentum_signals(
+        days,
+        reference_nav_by_date={
+            snapshot.trade_date: snapshot.nav
+            for snapshot in reference_backtest.snapshots
+        },
+        universe=universe_tuple,
+        lookback_sessions=lookback_sessions,
+        max_positions=max_positions,
+        entry_rank=entry_rank,
+        hold_rank=hold_rank,
+        volatility_lookback_sessions=volatility_lookback_sessions,
+        target_volatility=target_volatility,
+    )
+    return _run_from_signals(
+        experiment_id=experiment_id,
+        daily_bars=days,
+        benchmark_bars=benchmark_tuple,
+        signals=signals,
+        starting_cash=starting_cash,
+        max_positions=max_positions,
+        slippage_rate=slippage_rate,
+        complete_years=complete_years,
+        annual_turnover_limit=annual_turnover_limit,
+        untradeable_symbols_by_date=untradeable_symbols_by_date,
+        target_exposure_by_signal_date={
+            signal.signal_date: signal.exposure_multiplier
+            for signal in signals
+        },
+        volatility_exposure=summarize_volatility_exposure(
+            days,
+            weekly_signals=signals,
+            volatility_lookback_sessions=volatility_lookback_sessions,
+            target_volatility=target_volatility,
+        ),
+    )
+
+
 def _run_from_signals(
     *,
     experiment_id: str,
     daily_bars: Iterable[DailyBars],
     benchmark_bars: Iterable[TriBenchmarkBar],
-    signals: tuple[MomentumSignal | RegimeFilteredMomentumSignal, ...],
+    signals: tuple[
+        MomentumSignal | RegimeFilteredMomentumSignal | VolatilityScaledMomentumSignal,
+        ...
+    ],
     starting_cash: Decimal | str | int,
     max_positions: int,
     slippage_rate: Decimal | str | int,
     complete_years: Iterable[int],
     annual_turnover_limit: int,
     untradeable_symbols_by_date: Mapping[date, Iterable[str]] | None,
+    target_exposure_by_signal_date: Mapping[date, Decimal] | None = None,
     regime_exposure: RegimeExposureSummary | None = None,
+    volatility_exposure: VolatilityExposureSummary | None = None,
 ) -> Phase1ExperimentRun:
     clean_experiment_id = _experiment_id(experiment_id)
     days = tuple(daily_bars)
@@ -197,6 +290,7 @@ def _run_from_signals(
         },
         max_positions=max_positions,
         slippage_rate=slippage_rate,
+        target_exposure_by_signal_date=target_exposure_by_signal_date,
         untradeable_symbols_by_date=untradeable_symbols_by_date,
     )
     fills = tuple(
@@ -221,6 +315,7 @@ def _run_from_signals(
         turnover=turnover,
         performance=performance,
         regime_exposure=regime_exposure,
+        volatility_exposure=volatility_exposure,
     )
 
 

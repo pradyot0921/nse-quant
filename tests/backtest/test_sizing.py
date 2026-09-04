@@ -134,6 +134,75 @@ def test_sizing_caps_new_entries_at_target_position_budget():
     ]
 
 
+def test_sizing_target_exposure_reduces_overweight_and_buys_underweight():
+    current_state = state("100", position("AAA", 10))
+    plan = plan_rebalance_orders(
+        signal_date=SIGNAL_DAY,
+        current_state=current_state,
+        desired_symbols=["AAA", "BBB"],
+        target_exposure="0.5",
+    )
+
+    sized = size_rebalance_orders(
+        plan=plan,
+        current_state=current_state,
+        execution_bars=daily_bars(bar("AAA", "100"), bar("BBB", "50")),
+        max_positions=2,
+        slippage_rate="0",
+    )
+
+    assert [
+        (request.sequence, request.side, request.symbol, request.quantity)
+        for request in sized.requests
+    ] == [
+        (1, FillSide.SELL, "AAA", 7),
+        (2, FillSide.BUY, "BBB", 5),
+    ]
+
+
+def test_sizing_target_exposure_suppresses_buys_when_sell_is_pending():
+    current_state = state("100", position("AAA", 10))
+    plan = plan_rebalance_orders(
+        signal_date=SIGNAL_DAY,
+        current_state=current_state,
+        desired_symbols=["AAA", "BBB"],
+        target_exposure="0.5",
+    )
+
+    sized = size_rebalance_orders(
+        plan=plan,
+        current_state=current_state,
+        execution_bars=daily_bars(bar("AAA", "100"), bar("BBB", "50")),
+        max_positions=2,
+        slippage_rate="0",
+        blocked_sell_symbols=("AAA",),
+        suppress_buys=True,
+    )
+
+    assert sized.requests == ()
+
+
+def test_sizing_blocked_default_exit_does_not_fund_replacement_buy():
+    current_state = state("0", position("AAA", 10))
+    plan = plan_rebalance_orders(
+        signal_date=SIGNAL_DAY,
+        current_state=current_state,
+        desired_symbols=["BBB"],
+    )
+
+    sized = size_rebalance_orders(
+        plan=plan,
+        current_state=current_state,
+        execution_bars=daily_bars(bar("AAA", "100"), bar("BBB", "100")),
+        max_positions=1,
+        slippage_rate="0",
+        blocked_sell_symbols=("AAA",),
+    )
+
+    assert sized.requests == ()
+    assert sized.skipped_entries == ("BBB",)
+
+
 def test_sizing_rejects_desired_symbols_above_max_positions():
     current_state = state("1000")
     plan = plan_rebalance_orders(

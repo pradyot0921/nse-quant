@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 from enum import StrEnum
 from typing import Iterable
 
@@ -34,6 +35,7 @@ class RebalancePlan:
     signal_date: date
     desired_symbols: tuple[str, ...]
     orders: tuple[PlannedRebalanceOrder, ...]
+    target_exposure: Decimal | None = None
 
     @property
     def exit_orders(self) -> tuple[PlannedRebalanceOrder, ...]:
@@ -49,6 +51,7 @@ def plan_rebalance_orders(
     signal_date: date,
     current_state: PortfolioState,
     desired_symbols: Iterable[str],
+    target_exposure: Decimal | str | int | None = None,
 ) -> RebalancePlan:
     """Plan exits before entries from current holdings and desired symbols."""
 
@@ -56,6 +59,7 @@ def plan_rebalance_orders(
         raise TypeError("signal_date must be a date")
 
     desired = _desired_symbols(desired_symbols)
+    exposure = _target_exposure(target_exposure)
     desired_set = set(desired)
     positions = current_state.positions_by_symbol
 
@@ -94,6 +98,7 @@ def plan_rebalance_orders(
         signal_date=signal_date,
         desired_symbols=desired,
         orders=tuple(orders),
+        target_exposure=exposure,
     )
 
 
@@ -110,3 +115,14 @@ def _symbol(value: str) -> str:
     if not symbol:
         raise ValueError("symbol must be non-blank")
     return symbol
+
+
+def _target_exposure(value: Decimal | str | int | None) -> Decimal | None:
+    if value is None:
+        return None
+    if isinstance(value, float):
+        raise TypeError("target_exposure must not be a binary float")
+    exposure = value if isinstance(value, Decimal) else Decimal(value)
+    if exposure < Decimal("0") or exposure > Decimal("1"):
+        raise ValueError("target_exposure must be between 0 and 1")
+    return exposure

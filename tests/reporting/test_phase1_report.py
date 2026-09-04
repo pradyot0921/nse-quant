@@ -14,6 +14,7 @@ from nse_quant.reporting.phase1_report import (
     write_phase1_markdown_report,
 )
 from nse_quant.strategies.momentum import RegimeExposureSummary
+from nse_quant.strategies.momentum import VolatilityExposureSummary
 
 
 def request(trade_date, symbol, side, quantity, price):
@@ -249,6 +250,44 @@ def test_phase1_report_writes_b004_regime_and_concentration_sections(tmp_path):
     assert "| Maximum calendar-year positive contribution share | 0.750000 |" in text
     assert "## Direct Candidate Comparison" in text
     assert "| CAGR | 0.150000 | 0.136461 |" in text
+
+
+def test_phase1_report_writes_b005_volatility_exposure_section(tmp_path):
+    turnover = evaluate_round_trip_turnover([], complete_years=(2026,))
+
+    output = write_phase1_markdown_report(
+        tmp_path / "report.md",
+        experiment_id="B005",
+        strategy_name="weekly relative momentum with hysteresis + realized-volatility exposure scaling",
+        universe_version="nifty100_v0_20_d037",
+        data_version="nifty100_v0_adjusted_ohlcv_d039",
+        performance=summary(),
+        turnover=turnover,
+        complete_years=(2026,),
+        volatility_exposure=VolatilityExposureSummary(
+            lookback_sessions=126,
+            target_volatility=Decimal("0.12"),
+            min_exposure_multiplier=Decimal("0"),
+            max_exposure_multiplier=Decimal("1"),
+            mean_exposure_multiplier=Decimal("0.5"),
+            median_exposure_multiplier=Decimal("0.4"),
+            weekly_exposure_changes=7,
+            zero_exposure_sessions=10,
+            partial_exposure_sessions=20,
+            full_exposure_sessions=30,
+        ),
+    )
+
+    text = output.read_text(encoding="utf-8")
+    assert "## Volatility Exposure" in text
+    assert "| Realized-volatility lookback sessions | 126 |" in text
+    assert "| Target volatility | 0.120000 |" in text
+    assert "| Weekly exposure changes | 7 |" in text
+    assert "| Zero-exposure session share | 0.166667 |" in text
+    assert "| Partial-exposure session share | 0.333333 |" in text
+    assert "| Full-exposure session share | 0.500000 |" in text
+    assert "REALIZED-VOLATILITY LIMITATION:" in text
+    assert "BARROSO AND SANTA-CLARA'S SIX-MONTH MOMENTUM RISK-MANAGEMENT METHOD." in text
 
 
 def test_return_concentration_reproduces_hand_calculated_fixture():

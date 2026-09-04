@@ -13,6 +13,7 @@ from nse_quant.experiments.phase1 import (
     run_weekly_hysteresis_momentum_experiment,
     run_weekly_momentum_experiment,
     run_weekly_regime_filtered_hysteresis_momentum_experiment,
+    run_weekly_volatility_scaled_hysteresis_momentum_experiment,
 )
 from nse_quant.reporting.phase1_report import write_phase1_markdown_report
 from nse_quant.reporting.trade_log import (
@@ -76,6 +77,24 @@ SUPPORTED_EXPERIMENTS = {
         "hold_rank": 6,
         "regime_sma_sessions": 200,
     },
+    "B005": {
+        "kind": "volatility_scaled_hysteresis",
+        "max_positions": 3,
+        "slippage_rate": "0.0005",
+        "entry_rank": 3,
+        "hold_rank": 6,
+        "volatility_lookback_sessions": 126,
+        "target_volatility": "0.12",
+    },
+    "B005-S015": {
+        "kind": "volatility_scaled_hysteresis",
+        "max_positions": 3,
+        "slippage_rate": "0.0015",
+        "entry_rank": 3,
+        "hold_rank": 6,
+        "volatility_lookback_sessions": 126,
+        "target_volatility": "0.12",
+    },
 }
 
 
@@ -93,7 +112,12 @@ def main(argv: list[str] | None = None) -> int:
     experiment_id = args.experiment_id.strip().upper()
     if experiment_id not in SUPPORTED_EXPERIMENTS:
         raise SystemExit(f"{experiment_id} is not supported by this runner")
-    if args.period == "validation" and experiment_id in {"B004", "B004-S015"}:
+    if args.period == "validation" and experiment_id in {
+        "B004",
+        "B004-S015",
+        "B005",
+        "B005-S015",
+    }:
         raise SystemExit(
             f"{experiment_id} validation run is blocked until a Phase 3 "
             "promotion artifact exists"
@@ -143,6 +167,7 @@ def main(argv: list[str] | None = None) -> int:
             "Ledger result fields are not updated by this script.",
         ),
         regime_exposure=result.regime_exposure,
+        volatility_exposure=result.volatility_exposure,
     )
     trade_rows = tuple(
         row
@@ -199,6 +224,14 @@ def _run_experiment(
             entry_rank=int(config["entry_rank"]),
             hold_rank=int(config["hold_rank"]),
             regime_sma_sessions=int(config["regime_sma_sessions"]),
+        )
+    if config["kind"] == "volatility_scaled_hysteresis":
+        return run_weekly_volatility_scaled_hysteresis_momentum_experiment(
+            **common,
+            entry_rank=int(config["entry_rank"]),
+            hold_rank=int(config["hold_rank"]),
+            volatility_lookback_sessions=int(config["volatility_lookback_sessions"]),
+            target_volatility=str(config["target_volatility"]),
         )
     return run_weekly_momentum_experiment(**common)
 
