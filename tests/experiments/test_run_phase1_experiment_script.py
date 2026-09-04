@@ -255,6 +255,8 @@ def test_run_phase1_experiment_script_supports_b005_research_only(tmp_path):
     assert "## Volatility Exposure" in text
     assert "| Realized-volatility lookback sessions | 126 |" in text
     assert "| Target volatility | 0.120000 |" in text
+    assert "## Direct Candidate Comparison" in text
+    assert "| CAGR |" in text
     assert "REALIZED-VOLATILITY LIMITATION:" in text
 
 

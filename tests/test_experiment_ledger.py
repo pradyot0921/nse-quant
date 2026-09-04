@@ -32,8 +32,8 @@ def test_experiment_ledger_references_frozen_universe_and_dataset_versions():
     assert status_by_id["B002"] == "REJECTED"
     assert status_by_id["B003"] == "REJECTED"
     for row in ledger_rows:
-        if row["experiment_id"] not in {"B001", "B002", "B003", "B004"}:
-            if row["experiment_id"] == "B004-S015":
+        if row["experiment_id"] not in {"B001", "B002", "B003", "B004", "B005"}:
+            if row["experiment_id"] in {"B004-S015", "B005-S015"}:
                 assert row["status"] == "NOT_RUN"
                 continue
             assert row["status"] == "PLANNED"
@@ -133,27 +133,38 @@ def test_phase2_b004_rows_are_preregistered_and_blank():
     assert all(robust[column] == "" for column in result_columns)
 
 
-def test_phase2_b005_rows_are_preregistered_and_blank():
+def test_phase2_b005_rows_record_research_rejection():
     by_id = {row["experiment_id"]: row for row in rows()}
     b005 = by_id["B005"]
     robust = by_id["B005-S015"]
 
-    assert b005["status"] == "PLANNED"
+    assert b005["status"] == "REJECTED"
     assert b005["research_period"] == "2016-01-01..2022-12-31"
     assert b005["validation_period"] == "2023-01-01..2026-08-19"
     assert "realized-volatility exposure scaling" in b005["strategy"]
     assert "volatility_lookback=126 ordinary sessions" in b005["parameters"]
     assert "target_volatility=0.12 annualized" in b005["parameters"]
     assert "exposure_multiplier=min(1.0" in b005["parameters"]
-    assert "Pre-registered and implemented" in b005["notes"]
-    assert "no B005 research-period run yet" in b005["notes"]
-    assert "no B005 implementation or run yet" not in b005["notes"]
-    assert "Phase 2 baseline slot 2 of 3" in b005["notes"]
-    assert "No leverage" in b005["notes"]
+    assert b005["cagr"] == "0.032527"
+    assert b005["max_drawdown"] == "0.302637"
+    assert b005["sharpe"] == "0.332169"
+    assert b005["sortino"] == "0.303350"
+    assert b005["calmar"] == "0.107477"
+    assert b005["max_stock_positive_contribution_share"] == "0.263713"
+    assert b005["max_calendar_year_positive_contribution_share"] == "0.494308"
+    assert b005["turnover"] == "253"
+    assert b005["net_return"] == "0.251148"
+    assert "Drawdown gate PASS" in b005["notes"]
+    assert "stock concentration gate PASS" in b005["notes"]
+    assert "CAGR gate FAIL" in b005["notes"]
+    assert "Sharpe gate FAIL" in b005["notes"]
+    assert "turnover gate FAIL" in b005["notes"]
+    assert "calendar-year concentration gate FAIL" in b005["notes"]
+    assert "validation period not inspected" in b005["notes"]
 
-    assert robust["status"] == "PLANNED"
+    assert robust["status"] == "NOT_RUN"
     assert robust["slippage_model"] == "adverse deterministic slippage 0.15% robustness"
-    assert "Run only if B005 baseline passes" in robust["notes"]
+    assert "Not run because B005 failed frozen baseline promotion gates" in robust["notes"]
 
     result_columns = (
         "cagr",
@@ -166,7 +177,6 @@ def test_phase2_b005_rows_are_preregistered_and_blank():
         "turnover",
         "net_return",
     )
-    assert all(b005[column] == "" for column in result_columns)
     assert all(robust[column] == "" for column in result_columns)
 
 
@@ -184,7 +194,7 @@ def test_unrun_experiment_result_columns_remain_blank():
     )
 
     for row in rows():
-        if row["experiment_id"] in {"B001", "B002", "B003", "B004"}:
+        if row["experiment_id"] in {"B001", "B002", "B003", "B004", "B005"}:
             continue
         assert all(row[column] == "" for column in result_columns)
 
