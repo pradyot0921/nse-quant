@@ -146,6 +146,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     ledger_row = _ledger_row(Path(args.ledger), experiment_id)
+    _block_cancelled_b006_runs(experiment_id, ledger_row)
     start_date, end_date = _period_dates(ledger_row, args.period)
     dataset_path = _dataset_path(args.dataset, experiment_id)
     bars = tuple(
@@ -294,6 +295,18 @@ def _slippage_model(row: dict[str, str], config: dict[str, object]) -> str:
     if ledger_value:
         return ledger_value
     return f"adverse deterministic slippage {config['slippage_rate']}"
+
+
+def _block_cancelled_b006_runs(experiment_id: str, row: dict[str, str]) -> None:
+    if experiment_id not in {"B006", "B006-S015"}:
+        return
+    status = row.get("status", "").strip().upper()
+    if status not in {"CANCELLED", "NOT_RUN"}:
+        return
+    raise SystemExit(
+        f"{experiment_id} research run is blocked because B006 warm-up "
+        "dataset readiness failed before baseline execution"
+    )
 
 
 def _dataset_path(raw_dataset_arg: str, experiment_id: str) -> Path:

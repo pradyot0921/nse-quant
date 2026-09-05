@@ -35,8 +35,11 @@ def test_experiment_ledger_references_frozen_universe_and_dataset_versions():
     assert status_by_id["B003"] == "REJECTED"
     for row in ledger_rows:
         if row["experiment_id"] not in {"B001", "B002", "B003", "B004", "B005"}:
-            if row["experiment_id"] in {"B004-S015", "B005-S015"}:
+            if row["experiment_id"] in {"B004-S015", "B005-S015", "B006-S015"}:
                 assert row["status"] == "NOT_RUN"
+                continue
+            if row["experiment_id"] == "B006":
+                assert row["status"] == "CANCELLED"
                 continue
             assert row["status"] == "PLANNED"
         assert row["universe_version"] == "nifty100_v0_20_d037"
@@ -204,26 +207,28 @@ def test_unrun_experiment_result_columns_remain_blank():
         assert all(row[column] == "" for column in result_columns)
 
 
-def test_phase2_b006_rows_are_preregistered_and_blank():
+def test_phase2_b006_rows_record_warmup_data_cancellation():
     by_id = {row["experiment_id"]: row for row in rows()}
     b006 = by_id["B006"]
     robust = by_id["B006-S015"]
 
-    assert b006["status"] == "PLANNED"
+    assert b006["status"] == "CANCELLED"
     assert b006["research_period"] == "2016-01-01..2022-12-31"
     assert b006["validation_period"] == "2023-01-01..2026-08-19"
     assert b006["data_version"] == "nifty100_v0_52w_high_input_warmup_d074"
     assert "52-week-high proximity" in b006["strategy"]
     assert "T - 364 calendar days <= d <= T" in b006["parameters"]
     assert "input_only_warmup=pre-2016 ordinary-session adjusted OHLCV" in b006["parameters"]
-    assert "Phase 2 baseline slot 3 of 3" in b006["notes"]
-    assert "no B006 implementation, data warm-up build, or run yet" in b006["notes"]
+    assert "Cancelled before research execution" in b006["notes"]
+    assert "TECHM 2015-03-19 combined bonus-plus-split" in b006["notes"]
+    assert "No B006 warm-up dataset was built" in b006["notes"]
+    assert "No B006 research result exists" in b006["notes"]
     assert "Validation holdout sealed" in b006["notes"]
 
-    assert robust["status"] == "PLANNED"
+    assert robust["status"] == "NOT_RUN"
     assert robust["data_version"] == "nifty100_v0_52w_high_input_warmup_d074"
     assert robust["slippage_model"] == "adverse deterministic slippage 0.15% robustness"
-    assert "Run only if B006 baseline passes" in robust["notes"]
+    assert "Not run because B006 was cancelled before baseline research execution" in robust["notes"]
 
     result_columns = (
         "cagr",

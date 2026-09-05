@@ -4,6 +4,8 @@ from datetime import date, timedelta
 from pathlib import Path
 import importlib.util
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "run_phase1_experiment.py"
@@ -359,6 +361,33 @@ def test_run_phase1_experiment_script_blocks_b006_validation(tmp_path):
         assert "validation run is blocked until a Phase 3 promotion artifact exists" in str(exc)
     else:
         raise AssertionError("B006 validation run was not blocked")
+
+
+@pytest.mark.parametrize(
+    ("experiment_id", "status"),
+    [("B006", "CANCELLED"), ("B006-S015", "NOT_RUN")],
+)
+def test_run_phase1_experiment_script_blocks_cancelled_b006_research(
+    tmp_path, experiment_id, status
+):
+    script = load_script()
+    ledger = tmp_path / "ledger.csv"
+    ledger.write_text(
+        "\n".join(
+            [
+                "experiment_id,status,strategy,universe_version,data_version,research_period,validation_period",
+                f"{experiment_id},{status},weekly 52-week-high proximity ranking with hysteresis,u_v0,d_v0,2016-01-01..2016-01-31,2023-01-01..2023-01-31",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        script.main(["--experiment-id", experiment_id, "--period", "research", "--ledger", str(ledger)])
+    except SystemExit as exc:
+        assert "warm-up dataset readiness failed" in str(exc)
+    else:
+        raise AssertionError("cancelled B006 research run was not blocked")
 
 
 def _weekday_sessions(start: date, count: int) -> list[date]:
