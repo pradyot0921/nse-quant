@@ -2346,3 +2346,49 @@ candidate-specific data obstacle.
 **Affected experiments:** B006 and B006-S015.
 
 **Rerun required:** No. No B006 research result exists.
+
+---
+
+## D-077 - Close Phase 2 with no candidate promoted
+
+**Date:** 5 September 2026
+**Status:** Accepted
+
+**Old rule:** D-076 cancelled B006 after implementation because the required
+input-only warm-up data could not be built under the frozen corporate-action
+rules. B004 and B005 were already rejected before robustness.
+
+**New rule:** Phase 2 is complete under Outcome B of section 13 of the frozen
+specification. No candidate is promoted or eligible for Phase 3 validation.
+Section 11 counts baselines that ran or were cancelled after implementation
+began: B004 and B005 ran, and B006 was cancelled after implementation. All
+three baseline slots are consumed. No replacement or additional Phase 2
+candidate is authorized.
+
+B004-S015, B005-S015, and B006-S015 remain NOT_RUN. B006 has no research result;
+its cancellation is not a performance rejection. The ledger and committed
+results are unchanged by this closeout.
+
+The final closeout preserves D-067/D-068's B004 concentration correction and
+D-076's B006 sequencing discrepancy. It summarizes the existing D-073 beta
+diagnostic with its inference limits; no new regression or reconstruction was
+performed. Historical documents retain their original stage-specific wording;
+this decision and the final closeout define the current boundary.
+
+Validation remains sealed for `2023-01-01 through 2026-08-19`. Any later
+research needs a separately approved, pre-registered cycle with new IDs and
+explicit gates. Phase 3 remains reserved for validation of an eligible
+candidate; this closeout does not authorize starting it.
+
+**Evidence:** `docs/validation/PHASE2_FINAL_CLOSEOUT_V0.md`,
+`docs/PHASE_2_RESEARCH_SPEC.md` sections 11 and 13, `experiments/ledger.csv`,
+and D-076 merged through PR #75 at
+`9158f4f4d19eafea5ab698ba2b38f4448fd489e9`.
+
+**Reason:** The frozen candidate cap and no-candidate exit criteria are met.
+The closeout records the findings and limitations without reopening failed
+experiments or treating an untested hypothesis as a rejected result.
+
+**Affected experiments:** Phase 2 B004, B005, B006 and their S015 rows.
+
+**Rerun required:** No. Documentation closeout only.

@@ -36,7 +36,7 @@ def test_b006_implementation_status_is_visible_in_repo_status_documents():
     readme = " ".join(README.read_text(encoding="utf-8").split())
     decisions = " ".join(DECISIONS.read_text(encoding="utf-8").split())
 
-    assert "Phase 2 after B006 warm-up data stop" in readme
+    assert "Phase 2 complete; no candidate promoted" in readme
     assert "B006 is cancelled before research execution" in readme
     assert "D-075" in decisions
     assert "Implement B006 52-week-high proximity ranking" in decisions
