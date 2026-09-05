@@ -19,3 +19,8 @@ The [Phase 2 final closeout](docs/validation/PHASE2_FINAL_CLOSEOUT_V0.md)
 records the results, audit history, and remaining limitations. All three Phase
 2 baseline slots are consumed under the frozen rule, including B006's
 cancellation after implementation. No candidate is eligible for Phase 3.
+
+[Data Methodology V1](docs/DATA_METHODOLOGY_V1.md) adds an opt-in API for
+same-date split and bonus events, validated on TECHM's March 2015 action.
+B006 remains cancelled. A new research-cycle specification is required before
+creating C-series experiments or building their strategy input datasets.

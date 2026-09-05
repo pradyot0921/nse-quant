@@ -1,0 +1,81 @@
+{
+  "methodology": "DATA_METHODOLOGY_V1_D078",
+  "status": "PASS",
+  "scope": "TECHM 2015-03-18 through 2015-03-20 data-only; no strategy or holdout",
+  "fixture_canonical_sha256": "e6d212b64b98428e85a8d39fb0e916632342de4122a431fa60e2af630fe4053f",
+  "corporate_action_source_sha256": "70943398f7a457fd54eeffea3bc9250b6dce3c2f9c0108ce0ff9d7d24bd6df96",
+  "issuer_source": "https://cache.techmahindra.com/cache/investors/Annual-Report-FY14-15.pdf",
+  "components": [
+    {
+      "type": "bonus",
+      "price_factor": "0.5000000000",
+      "volume_factor": "2.0000000000"
+    },
+    {
+      "type": "split",
+      "price_factor": "0.5000000000",
+      "volume_factor": "2.0000000000"
+    }
+  ],
+  "archives": [
+    {
+      "date": "2015-03-18",
+      "url": "https://nsearchives.nseindia.com/content/historical/EQUITIES/2015/MAR/cm18MAR2015bhav.csv.zip",
+      "sha256": "5fbd5bbac0a5bd9e509a439fb5fef7c997934e4a89e67fa6563e4a4d842e1997",
+      "rejected_rows": 0
+    },
+    {
+      "date": "2015-03-19",
+      "url": "https://nsearchives.nseindia.com/content/historical/EQUITIES/2015/MAR/cm19MAR2015bhav.csv.zip",
+      "sha256": "da295c74d69cd74e2df4e33a356913a4fdae654c7dd84df98280d3a8c2212858",
+      "rejected_rows": 0
+    },
+    {
+      "date": "2015-03-20",
+      "url": "https://nsearchives.nseindia.com/content/historical/EQUITIES/2015/MAR/cm20MAR2015bhav.csv.zip",
+      "sha256": "d876d3d801afc7c3c315d319f9e96c55f64ab4dfc32074377ca9f2c0a6554271",
+      "rejected_rows": 0
+    }
+  ],
+  "adjusted_bars": [
+    {
+      "date": "2015-03-18",
+      "isin": "INE669C01028",
+      "raw_close": "2800.5",
+      "adjusted_open": "718.500000",
+      "adjusted_high": "720.000000",
+      "adjusted_low": "697.500000",
+      "adjusted_close": "700.125000",
+      "raw_volume": "3806886",
+      "adjusted_volume": "15227544.000000",
+      "price_factor": "0.2500000000",
+      "volume_factor": "4.0000000000"
+    },
+    {
+      "date": "2015-03-19",
+      "isin": "INE669C01028",
+      "raw_close": "687.15",
+      "adjusted_open": "695.000000",
+      "adjusted_high": "700.900000",
+      "adjusted_low": "685.000000",
+      "adjusted_close": "687.150000",
+      "raw_volume": "5621879",
+      "adjusted_volume": "5621879.000000",
+      "price_factor": "1",
+      "volume_factor": "1"
+    },
+    {
+      "date": "2015-03-20",
+      "isin": "INE669C01036",
+      "raw_close": "678.3",
+      "adjusted_open": "688.950000",
+      "adjusted_high": "690.000000",
+      "adjusted_low": "673.000000",
+      "adjusted_close": "678.300000",
+      "raw_volume": "3616042",
+      "adjusted_volume": "3616042.000000",
+      "price_factor": "1",
+      "volume_factor": "1"
+    }
+  ]
+}

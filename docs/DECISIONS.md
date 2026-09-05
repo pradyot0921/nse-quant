@@ -2392,3 +2392,60 @@ experiments or treating an untested hypothesis as a rejected result.
 **Affected experiments:** Phase 2 B004, B005, B006 and their S015 rows.
 
 **Rerun required:** No. Documentation closeout only.
+
+---
+
+## D-078 - Add opt-in same-date corporate-action methodology after V0 closeout
+
+**Date:** 5 September 2026
+**Status:** Accepted
+
+**Old rule:** The frozen single-action parser quarantines combined split and
+bonus records under D-016. D-076 cancelled B006, and D-077 closed Phase 2 with
+no candidate promoted. PR #76 merged at
+`d021ac681bcddd36acb5cc49ddf9b33a9d29348a`.
+
+**New rule:** Independent data maintenance introduces the opt-in methodology
+`DATA_METHODOLOGY_V1_D078`. An event preserves one original source record and
+one or two typed components. Exactly recognized equity bonus and split
+components on one ex-date multiply in canonical order; unknown combined
+wording is quarantined atomically. Duplicate or conflicting same-symbol,
+same-ex-date, same-type components halt adjustment, including combined plus
+separately repeated legs. Existing Decimal factor precision, backward ex-date
+semantics, volume adjustment, and record-date ISIN checks are retained.
+
+The legacy parser and V0 dataset builder are unchanged. This is an explicit
+new data-methodology path, not an in-place reinterpretation of frozen results.
+B006 remains CANCELLED, all Phase 2 S015 rows remain NOT_RUN, and no C-series
+experiment is created. No strategy input dataset is built or regenerated.
+
+TECHM's 2015 issuer share-count disclosure independently supports a 1:1 bonus
+and two-for-one split, giving historical price factor 0.25 and volume factor
+4. Data-only verification uses the saved NSE action row and three 2015
+bhavcopies around the ex-date, pinned by hash. It does not inspect 2016-2022
+strategy outcomes or any validation-period output.
+
+**Evidence:** `docs/DATA_METHODOLOGY_V1.md`,
+`docs/validation/TECHM_2015_MULTI_ACTION_V1.md`,
+`docs/validation/TECHM_2015_MULTI_ACTION_V1.json`,
+`tests/fixtures/techm_2015_multi_action.json`, the offline validation script,
+and synthetic event/adjustment tests.
+
+**Reason:** The user authorized corporate-action infrastructure work after
+formal Phase 2 closure and before any new experiment. Support is specified
+from mechanical entitlement rules and source records, without testing a
+strategy response. This addresses a known data limitation while preserving
+the permanent B006 cancellation and sealed holdout.
+
+**Next boundary:** After review and merge, write a separate Research Cycle 2 /
+V1 Strategy Research specification with at most two baselines, permanent
+results, unchanged numerical gates, and cumulative B/C attempt accounting.
+It must address multiple-testing methods before promotion and prohibit
+event-specific research diagnosis. C001 preregistration, a fresh dataset,
+data audit, implementation review, research, and conditional robustness are
+later distinct steps. Phase 3 remains one-time validation of an eligible
+candidate only. The holdout remains sealed.
+
+**Affected experiments:** None; future datasets may explicitly adopt D-078.
+
+**Rerun required:** No strategy rerun. Data-only source replay and tests only.
