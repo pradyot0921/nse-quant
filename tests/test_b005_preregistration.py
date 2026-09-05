@@ -58,7 +58,6 @@ def test_b005_status_is_visible_in_repo_status_documents():
     readme = " ".join(README.read_text(encoding="utf-8").split())
     decisions = " ".join(DECISIONS.read_text(encoding="utf-8").split())
 
-    assert "Phase 2 after B005 research rejection" in readme
     assert "B004 and B005 are rejected before robustness" in readme
     assert "B004-S015 and B005-S015 are not run" in readme
     assert "D-069" in decisions

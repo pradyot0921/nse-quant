@@ -2285,3 +2285,64 @@ cancelled before real research execution.
 **Affected experiments:** B006 and B006-S015.
 
 **Rerun required:** No prior B006 result exists.
+
+---
+
+## D-076 - Cancel B006 before research execution after warm-up corporate-action audit
+
+**Date:** 4 September 2026
+**Status:** Accepted
+
+**Old rule:** After B006 implementation, the next permitted step was to build
+the pre-registered input-only warm-up dataset
+`nifty100_v0_52w_high_input_warmup_d074`. B006 could run only if that warm-up
+history could be built cleanly under deterministic V0 data and corporate-action
+rules.
+
+**New rule:** B006 is cancelled before research execution. The required
+input-only warm-up starts on `2015-01-02`, because the first ordinary 2016
+weekly signal requires the 364-calendar-day window ending on `2016-01-01`.
+
+The 2015 NSE corporate-action scan completed without row-level failures, but
+the frozen 20-stock universe has selected-symbol corporate-action records that
+the current V0 parser cannot support inside the required warm-up window:
+
+```text
+HCLTECH 2015-03-19 Bonus 1 : 1
+TECHM   2015-03-19 Bonus 1:1 / Face Value Split - From Rs 10/- Per Share To Rs 5/- Per Share
+```
+
+The TECHM record is the blocking item. D-016 explicitly keeps combined
+split-plus-bonus purpose strings unsupported until the parser can represent
+multiple actions on one ex-date. Adding that support after discovering the
+B006 warm-up blocker would be a new data-methodology decision and is not part
+of B006.
+
+Do not build `data/processed/nifty100_v0_52w_high_input_warmup.csv` under the
+current corporate-action rules. Do not run B006. Do not run B006-S015. Do not
+inspect validation.
+
+This is a data-validity cancellation, not evidence for or against the
+52-week-high ranking hypothesis.
+
+**Sequencing discrepancy:** The frozen B006 stop rule called for cancellation
+before implementation if warm-up data could not be built cleanly. D-075 and
+PR #74 implemented B006 before this audit established data readiness. That
+ordering did not meet the stated pre-implementation boundary. The frozen
+pre-registration remains unchanged; this entry records the discrepancy.
+Cancellation occurred before dataset construction and real research execution,
+so no B006 performance result or validation inspection informed it.
+
+**Evidence:** `docs/validation/B006_CORPORATE_ACTION_WARMUP_SCAN_V0.md`,
+`docs/validation/B006_INPUT_WARMUP_DATASET_V0.md`, `experiments/ledger.csv`,
+and the B006 warm-up stop tests.
+
+**Reason:** The B006 pre-registration explicitly required cancellation if the
+input-only warm-up history could not be built cleanly under deterministic V0
+data and corporate-action rules. Keeping that stop preserves the validation
+holdout and avoids changing corporate-action methodology after discovering a
+candidate-specific data obstacle.
+
+**Affected experiments:** B006 and B006-S015.
+
+**Rerun required:** No. No B006 research result exists.
