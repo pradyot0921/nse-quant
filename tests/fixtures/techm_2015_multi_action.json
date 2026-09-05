@@ -1,0 +1,48 @@
+{
+  "methodology": "DATA_METHODOLOGY_V1_D078",
+  "issuer_source": "https://cache.techmahindra.com/cache/investors/Annual-Report-FY14-15.pdf",
+  "issuer_pdf_page": 98,
+  "corporate_action_source_sha256": "70943398f7a457fd54eeffea3bc9250b6dce3c2f9c0108ce0ff9d7d24bd6df96",
+  "corporate_action": {
+    "symbol": "TECHM",
+    "series": "EQ",
+    "exDate": "19-Mar-2015",
+    "recDate": "20-Mar-2015",
+    "subject": "Bonus 1:1 / Face Value Split - From Rs 10/- Per Share To Rs 5/- Per Share"
+  },
+  "bars": [
+    {
+      "date": "2015-03-18",
+      "archive_sha256": "5fbd5bbac0a5bd9e509a439fb5fef7c997934e4a89e67fa6563e4a4d842e1997",
+      "isin": "INE669C01028",
+      "open": "2874",
+      "high": "2880",
+      "low": "2790",
+      "close": "2800.5",
+      "volume": "3806886",
+      "previous_close": "2862.9"
+    },
+    {
+      "date": "2015-03-19",
+      "archive_sha256": "da295c74d69cd74e2df4e33a356913a4fdae654c7dd84df98280d3a8c2212858",
+      "isin": "INE669C01028",
+      "open": "695",
+      "high": "700.9",
+      "low": "685",
+      "close": "687.15",
+      "volume": "5621879",
+      "previous_close": "2800.5"
+    },
+    {
+      "date": "2015-03-20",
+      "archive_sha256": "d876d3d801afc7c3c315d319f9e96c55f64ab4dfc32074377ca9f2c0a6554271",
+      "isin": "INE669C01036",
+      "open": "688.95",
+      "high": "690",
+      "low": "673",
+      "close": "678.3",
+      "volume": "3616042",
+      "previous_close": "687.15"
+    }
+  ]
+}

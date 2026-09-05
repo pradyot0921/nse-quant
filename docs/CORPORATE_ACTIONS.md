@@ -3,6 +3,11 @@
 **Status:** Phase 1 implementation note  
 **Decision anchor:** D-016, D-017, D-018, D-019, and D-020 in `docs/DECISIONS.md`
 
+This note describes the retained V0 parsing path. The opt-in
+[Data Methodology V1](DATA_METHODOLOGY_V1.md), under D-078, adds explicit
+same-date event bundles for future datasets. It does not change the legacy
+parser or retrospectively change the frozen V0 data and research results.
+
 ## V1 Supported Actions
 
 The first corporate-action parser supports only deterministic single-event actions:
